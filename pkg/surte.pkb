@@ -74,7 +74,7 @@ create or replace package body surte as
             , valor desc
           ) as ranking
           from vw_ordenes_pedido_pendiente
---      where numero in (837053, 807600, 820017, 820112)
+         where numero in (782360)
         )
     select *
       from detalle
@@ -201,6 +201,7 @@ create or replace package body surte as
       l_pedidos(r.ranking).detalle(l_idx).faltante := null;
       l_pedidos(r.ranking).detalle(l_idx).linea := r.cod_lin;
       l_pedidos(r.ranking).detalle(l_idx).es_importado := r.es_importado;
+      l_pedidos(r.ranking).detalle(l_idx).rendimiento := r.rendimiento;
       l_pedidos(r.ranking).detalle(l_idx).tiene_stock_itm := null;
     end;
 
@@ -254,6 +255,7 @@ create or replace package body surte as
     , o_es_partible out boolean
     ) is
     begin
+      o_es_partible := true;
       for i in 1 .. io_calculo.count loop
         if p_cant_partir * io_calculo(i).rendimiento <= io_calculo(i).cant_final then
           io_calculo(i).cant_final := p_cant_partir * io_calculo(i).rendimiento;
@@ -294,7 +296,6 @@ create or replace package body surte as
     -- progresivamente en el orden dado
     procedure consume_stock is
       l_calculo         calculo_aat;
---       l_codart          codart_t;
       l_stock_actual    number  := 0;
       l_tiene_stock_ot  boolean := true;
       l_tiene_stock_itm boolean := true;
@@ -305,7 +306,6 @@ create or replace package body surte as
         l_calculo.delete();
 
         for j in 1 .. l_pedidos(i).detalle.count loop
-          --           l_codart := l_pedidos(i).detalle(j).cod_art;
           l_stock_actual := l_stocks(l_pedidos(i).detalle(j).cod_art);
           l_calculo(j).stock_actual := l_stock_actual;
           l_calculo(j).rendimiento := l_pedidos(i).detalle(j).rendimiento;

@@ -515,11 +515,6 @@ select distinct p.id_pedido
        join pr_programa_embarques_id i
             on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1;
 
--- detalle piezas
-select ranking, nom_cliente, nro_pedido, itm_pedido, ot_numero, formu_art, valor, es_juego, tiene_stock_ot
-     , cod_art, cantidad, stock_inicial, saldo_stock, linea, es_importado, tiene_stock_itm
-  from tmp_ordenes_surtir
- order by ranking;
 
 -- agrupado por juegos
 select ranking, nom_cliente, nro_pedido, itm_pedido, ot_numero, formu_art, valor, es_juego, tiene_importado
@@ -580,7 +575,9 @@ select cod_cliente, nom_cliente
  group by cod_cliente, nom_cliente
  order by nom_cliente;
 
-select * from tmp_ordenes_surtir;
+select *
+  from tmp_ordenes_surtir
+ order by ranking;
 
 select *
   from tmp_ordenes_surtir
@@ -589,3 +586,10 @@ select *
 select *
   from tmp_ordenes_surtir
  where tiene_stock_ot = 'SI';
+
+-- detalle piezas
+select ranking, nom_cliente, nro_pedido, itm_pedido, ot_numero, formu_art, valor, valor_surtir, es_juego
+     , partir_ot, tiene_stock_ot, cod_art, cantidad, rendimiento, stock_inicial, cant_final, saldo_stock
+     , linea, es_importado, tiene_stock_itm
+  from tmp_ordenes_surtir
+ order by ranking;
