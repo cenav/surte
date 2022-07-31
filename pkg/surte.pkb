@@ -59,7 +59,7 @@ create or replace package body surte as
   bulk_errors exception;
   pragma exception_init (bulk_errors, -24381);
 
-  cursor pedidos_cur is
+  cursor pedidos_cur(p_valor number) is
     -- pedidos de clientes ordenados primero por juegos, luego de mayor a menor valor
       with detalle as (
         select cod_cliente, nombre, fch_pedido, pedido, pedido_item, nuot_serie, nuot_tipoot_codigo
@@ -69,7 +69,7 @@ create or replace package body surte as
              , case when lag(numero) over (order by null) = numero then null else numero end oa
              , dense_rank() over (
           order by es_prioritario desc
-            , case when valor > 1000 then 1 else 0 end desc
+            , case when valor > p_valor then 1 else 0 end desc
             , es_juego
             , valor desc
           ) as ranking
@@ -130,17 +130,24 @@ create or replace package body surte as
   end;
 
   procedure por_item is
-    l_stocks  stock_aat;
-    l_pedidos pedidos_aat;
-    l_tmp     tmp_aat;
+    g_stocks  stock_aat;
+    g_pedidos pedidos_aat;
+    g_tmp     tmp_aat;
+    g_param   param_surte%rowtype;
+
+    procedure init is
+    begin
+      g_stocks := carga_stock();
+      g_param := api_param_surte.onerow();
+    end;
 
     function saldo_stock(
       p_codart articul.cod_art%type
     , p_cant   number
     ) return number is
     begin
-      l_stocks(p_codart) := l_stocks(p_codart) - p_cant;
-      return l_stocks(p_codart);
+      g_stocks(p_codart) := g_stocks(p_codart) - p_cant;
+      return g_stocks(p_codart);
     end;
 
     procedure agrega_stock(
@@ -148,7 +155,7 @@ create or replace package body surte as
     , p_cant   number
     ) is
     begin
-      l_stocks(p_codart) := l_stocks(p_codart) + p_cant;
+      g_stocks(p_codart) := g_stocks(p_codart) + p_cant;
     end;
 
     function sobrante(
@@ -169,23 +176,23 @@ create or replace package body surte as
       r pedidos_cur%rowtype
     ) is
     begin
-      l_pedidos(r.ranking).ranking := r.ranking;
-      l_pedidos(r.ranking).cod_cliente := r.cod_cliente;
-      l_pedidos(r.ranking).nom_cliente := r.nombre;
-      l_pedidos(r.ranking).nro_pedido := r.pedido;
-      l_pedidos(r.ranking).itm_pedido := r.pedido_item;
-      l_pedidos(r.ranking).fch_pedido := r.fch_pedido;
-      l_pedidos(r.ranking).valor := r.valor;
-      l_pedidos(r.ranking).ot_tipo := r.nuot_tipoot_codigo;
-      l_pedidos(r.ranking).ot_serie := r.nuot_serie;
-      l_pedidos(r.ranking).ot_numero := r.numero;
-      l_pedidos(r.ranking).ot_estado := r.estado;
-      l_pedidos(r.ranking).formu_art := r.formu_art_cod_art;
-      l_pedidos(r.ranking).es_juego := r.es_juego;
-      l_pedidos(r.ranking).tiene_importado := r.tiene_importado;
-      l_pedidos(r.ranking).impreso := r.impreso;
-      l_pedidos(r.ranking).fch_impresion := r.fch_impresion;
-      l_pedidos(r.ranking).tiene_stock_ot := null;
+      g_pedidos(r.ranking).ranking := r.ranking;
+      g_pedidos(r.ranking).cod_cliente := r.cod_cliente;
+      g_pedidos(r.ranking).nom_cliente := r.nombre;
+      g_pedidos(r.ranking).nro_pedido := r.pedido;
+      g_pedidos(r.ranking).itm_pedido := r.pedido_item;
+      g_pedidos(r.ranking).fch_pedido := r.fch_pedido;
+      g_pedidos(r.ranking).valor := r.valor;
+      g_pedidos(r.ranking).ot_tipo := r.nuot_tipoot_codigo;
+      g_pedidos(r.ranking).ot_serie := r.nuot_serie;
+      g_pedidos(r.ranking).ot_numero := r.numero;
+      g_pedidos(r.ranking).ot_estado := r.estado;
+      g_pedidos(r.ranking).formu_art := r.formu_art_cod_art;
+      g_pedidos(r.ranking).es_juego := r.es_juego;
+      g_pedidos(r.ranking).tiene_importado := r.tiene_importado;
+      g_pedidos(r.ranking).impreso := r.impreso;
+      g_pedidos(r.ranking).fch_impresion := r.fch_impresion;
+      g_pedidos(r.ranking).tiene_stock_ot := null;
     end;
 
     procedure crea_detalle(
@@ -193,28 +200,28 @@ create or replace package body surte as
     ) is
       l_idx pls_integer := 0;
     begin
-      l_idx := l_pedidos(r.ranking).detalle.count + 1;
-      l_pedidos(r.ranking).detalle(l_idx).cod_art := r.art_cod_art;
-      l_pedidos(r.ranking).detalle(l_idx).cantidad := r.cant_formula;
-      l_pedidos(r.ranking).detalle(l_idx).stock_inicial := r.stock;
-      l_pedidos(r.ranking).detalle(l_idx).saldo_stock := null;
-      l_pedidos(r.ranking).detalle(l_idx).faltante := null;
-      l_pedidos(r.ranking).detalle(l_idx).linea := r.cod_lin;
-      l_pedidos(r.ranking).detalle(l_idx).es_importado := r.es_importado;
-      l_pedidos(r.ranking).detalle(l_idx).rendimiento := r.rendimiento;
-      l_pedidos(r.ranking).detalle(l_idx).tiene_stock_itm := null;
+      l_idx := g_pedidos(r.ranking).detalle.count + 1;
+      g_pedidos(r.ranking).detalle(l_idx).cod_art := r.art_cod_art;
+      g_pedidos(r.ranking).detalle(l_idx).cantidad := r.cant_formula;
+      g_pedidos(r.ranking).detalle(l_idx).stock_inicial := r.stock;
+      g_pedidos(r.ranking).detalle(l_idx).saldo_stock := null;
+      g_pedidos(r.ranking).detalle(l_idx).faltante := null;
+      g_pedidos(r.ranking).detalle(l_idx).linea := r.cod_lin;
+      g_pedidos(r.ranking).detalle(l_idx).es_importado := r.es_importado;
+      g_pedidos(r.ranking).detalle(l_idx).rendimiento := r.rendimiento;
+      g_pedidos(r.ranking).detalle(l_idx).tiene_stock_itm := null;
     end;
 
     procedure regresa_stock(
       p_idx pls_integer
     ) is
     begin
-      l_pedidos(p_idx).tiene_stock_ot := 'NO';
-      for j in 1 .. l_pedidos(p_idx).detalle.count loop
-        agrega_stock(l_pedidos(p_idx).detalle(j).cod_art, l_pedidos(p_idx).detalle(j).cantidad);
-        l_pedidos(p_idx).detalle(j).saldo_stock := null;
-        l_pedidos(p_idx).detalle(j).sobrante := null;
-        l_pedidos(p_idx).detalle(j).faltante := null;
+      g_pedidos(p_idx).tiene_stock_ot := 'NO';
+      for j in 1 .. g_pedidos(p_idx).detalle.count loop
+        agrega_stock(g_pedidos(p_idx).detalle(j).cod_art, g_pedidos(p_idx).detalle(j).cantidad);
+        g_pedidos(p_idx).detalle(j).saldo_stock := null;
+        g_pedidos(p_idx).detalle(j).sobrante := null;
+        g_pedidos(p_idx).detalle(j).faltante := null;
       end loop;
     end;
 
@@ -224,14 +231,14 @@ create or replace package body surte as
     ) is
       l_codart codart_t;
     begin
-      l_pedidos(p_idx).tiene_stock_ot := 'SI';
-      for j in 1 .. l_pedidos(p_idx).detalle.count loop
-        l_codart := l_pedidos(p_idx).detalle(j).cod_art;
-        l_pedidos(p_idx).detalle(j).stock_actual := p_calculo(j).stock_actual;
-        l_pedidos(p_idx).detalle(j).saldo_stock := l_stocks(l_codart) - p_calculo(j).cant_final;
-        l_pedidos(p_idx).detalle(j).cant_final := p_calculo(j).cant_final;
-        l_stocks(l_pedidos(p_idx).detalle(j).cod_art) :=
-              l_stocks(l_codart) - l_pedidos(p_idx).detalle(j).cant_final;
+      g_pedidos(p_idx).tiene_stock_ot := 'SI';
+      for j in 1 .. g_pedidos(p_idx).detalle.count loop
+        l_codart := g_pedidos(p_idx).detalle(j).cod_art;
+        g_pedidos(p_idx).detalle(j).stock_actual := p_calculo(j).stock_actual;
+        g_pedidos(p_idx).detalle(j).saldo_stock := g_stocks(l_codart) - p_calculo(j).cant_final;
+        g_pedidos(p_idx).detalle(j).cant_final := p_calculo(j).cant_final;
+        g_stocks(g_pedidos(p_idx).detalle(j).cod_art) :=
+              g_stocks(l_codart) - g_pedidos(p_idx).detalle(j).cant_final;
       end loop;
     end;
 
@@ -273,22 +280,22 @@ create or replace package body surte as
       l_cant_partir number;
       l_es_partible boolean;
     begin
-      l_pedidos(p_idx).tiene_stock_ot := 'NO';
+      g_pedidos(p_idx).tiene_stock_ot := 'NO';
       l_cant_partir := find_min(io_calculo);
       prueba_partir(io_calculo, l_cant_partir, l_es_partible);
       if l_es_partible then
-        l_pedidos(p_idx).partir_ot := 1;
-        l_pedidos(p_idx).cant_partir := l_cant_partir;
-        for j in 1 .. l_pedidos(p_idx).detalle.count loop
-          l_codart := l_pedidos(p_idx).detalle(j).cod_art;
-          l_pedidos(p_idx).detalle(j).stock_actual := io_calculo(j).stock_actual;
-          l_pedidos(p_idx).detalle(j).saldo_stock := l_stocks(l_codart) - io_calculo(j).cant_final;
-          l_pedidos(p_idx).detalle(j).cant_final := io_calculo(j).cant_final;
-          l_stocks(l_pedidos(p_idx).detalle(j).cod_art) :=
-                l_stocks(l_codart) - l_pedidos(p_idx).detalle(j).cant_final;
+        g_pedidos(p_idx).partir_ot := 1;
+        g_pedidos(p_idx).cant_partir := l_cant_partir;
+        for j in 1 .. g_pedidos(p_idx).detalle.count loop
+          l_codart := g_pedidos(p_idx).detalle(j).cod_art;
+          g_pedidos(p_idx).detalle(j).stock_actual := io_calculo(j).stock_actual;
+          g_pedidos(p_idx).detalle(j).saldo_stock := g_stocks(l_codart) - io_calculo(j).cant_final;
+          g_pedidos(p_idx).detalle(j).cant_final := io_calculo(j).cant_final;
+          g_stocks(g_pedidos(p_idx).detalle(j).cod_art) :=
+                g_stocks(l_codart) - g_pedidos(p_idx).detalle(j).cant_final;
         end loop;
       else
-        l_pedidos(p_idx).partir_ot := 0;
+        g_pedidos(p_idx).partir_ot := 0;
       end if;
     end;
 
@@ -301,18 +308,18 @@ create or replace package body surte as
       l_tiene_stock_itm boolean := true;
       l_puede_partirse  boolean := true;
     begin
-      for i in 1 .. l_pedidos.count loop
+      for i in 1 .. g_pedidos.count loop
         l_tiene_stock_ot := true;
         l_calculo.delete();
 
-        for j in 1 .. l_pedidos(i).detalle.count loop
-          l_stock_actual := l_stocks(l_pedidos(i).detalle(j).cod_art);
+        for j in 1 .. g_pedidos(i).detalle.count loop
+          l_stock_actual := g_stocks(g_pedidos(i).detalle(j).cod_art);
           l_calculo(j).stock_actual := l_stock_actual;
-          l_calculo(j).rendimiento := l_pedidos(i).detalle(j).rendimiento;
-          l_tiene_stock_itm := l_stock_actual >= l_pedidos(i).detalle(j).cantidad;
+          l_calculo(j).rendimiento := g_pedidos(i).detalle(j).rendimiento;
+          l_tiene_stock_itm := l_stock_actual >= g_pedidos(i).detalle(j).cantidad;
 
           if l_tiene_stock_itm then
-            l_calculo(j).cant_final := l_pedidos(i).detalle(j).cantidad;
+            l_calculo(j).cant_final := g_pedidos(i).detalle(j).cantidad;
           else
             l_tiene_stock_ot := false;
             -- busca partir la orden
@@ -324,8 +331,8 @@ create or replace package body surte as
             end if;
           end if;
 
-          l_pedidos(i).detalle(j).stock_actual := l_stock_actual;
-          l_pedidos(i).detalle(j).tiene_stock_itm := case when l_tiene_stock_itm then 'SI' else 'NO' end;
+          g_pedidos(i).detalle(j).stock_actual := l_stock_actual;
+          g_pedidos(i).detalle(j).tiene_stock_itm := case when l_tiene_stock_itm then 'SI' else 'NO' end;
         end loop;
 
         case
@@ -334,15 +341,15 @@ create or replace package body surte as
           when l_puede_partirse then
             parte_orden(i, l_calculo);
           else
-            l_pedidos(i).tiene_stock_ot := 'NO';
-            l_pedidos(i).partir_ot := 0;
+            g_pedidos(i).tiene_stock_ot := 'NO';
+            g_pedidos(i).partir_ot := 0;
         end case;
       end loop;
     end;
 
     procedure carga_colecciones is
     begin
-      for r in pedidos_cur loop
+      for r in pedidos_cur(g_param.valor_item) loop
         -- para el primer quiebre de grupo (item pedido)
         -- normaliza la data
         if r.oa is not null then
@@ -358,42 +365,42 @@ create or replace package body surte as
     -- tampoco ocepta forall con colleciones indexadas por varchar2
     procedure desnormaliza is
     begin
-      for i in 1 .. l_pedidos.count loop
+      for i in 1 .. g_pedidos.count loop
 
-        for j in 1 .. l_pedidos(i).detalle.count loop
+        for j in 1 .. g_pedidos(i).detalle.count loop
           -- maestro
-          l_tmp(l_tmp.count + 1).ranking := l_pedidos(i).ranking;
-          l_tmp(l_tmp.count).cod_cliente := l_pedidos(i).cod_cliente;
-          l_tmp(l_tmp.count).nom_cliente := l_pedidos(i).nom_cliente;
-          l_tmp(l_tmp.count).nro_pedido := l_pedidos(i).nro_pedido;
-          l_tmp(l_tmp.count).itm_pedido := l_pedidos(i).itm_pedido;
-          l_tmp(l_tmp.count).fch_pedido := l_pedidos(i).fch_pedido;
-          l_tmp(l_tmp.count).ot_tipo := l_pedidos(i).ot_tipo;
-          l_tmp(l_tmp.count).ot_serie := l_pedidos(i).ot_serie;
-          l_tmp(l_tmp.count).ot_numero := l_pedidos(i).ot_numero;
-          l_tmp(l_tmp.count).formu_art := l_pedidos(i).formu_art;
-          l_tmp(l_tmp.count).es_juego := l_pedidos(i).es_juego;
-          l_tmp(l_tmp.count).tiene_importado := l_pedidos(i).tiene_importado;
-          l_tmp(l_tmp.count).ot_estado := l_pedidos(i).ot_estado;
-          l_tmp(l_tmp.count).tiene_stock_ot := l_pedidos(i).tiene_stock_ot;
-          l_tmp(l_tmp.count).valor := l_pedidos(i).valor;
-          l_tmp(l_tmp.count).impreso := l_pedidos(i).impreso;
-          l_tmp(l_tmp.count).fch_impresion := l_pedidos(i).fch_impresion;
-          l_tmp(l_tmp.count).partir_ot := l_pedidos(i).partir_ot;
-          l_tmp(l_tmp.count).cant_partir := l_pedidos(i).cant_partir;
+          g_tmp(g_tmp.count + 1).ranking := g_pedidos(i).ranking;
+          g_tmp(g_tmp.count).cod_cliente := g_pedidos(i).cod_cliente;
+          g_tmp(g_tmp.count).nom_cliente := g_pedidos(i).nom_cliente;
+          g_tmp(g_tmp.count).nro_pedido := g_pedidos(i).nro_pedido;
+          g_tmp(g_tmp.count).itm_pedido := g_pedidos(i).itm_pedido;
+          g_tmp(g_tmp.count).fch_pedido := g_pedidos(i).fch_pedido;
+          g_tmp(g_tmp.count).ot_tipo := g_pedidos(i).ot_tipo;
+          g_tmp(g_tmp.count).ot_serie := g_pedidos(i).ot_serie;
+          g_tmp(g_tmp.count).ot_numero := g_pedidos(i).ot_numero;
+          g_tmp(g_tmp.count).formu_art := g_pedidos(i).formu_art;
+          g_tmp(g_tmp.count).es_juego := g_pedidos(i).es_juego;
+          g_tmp(g_tmp.count).tiene_importado := g_pedidos(i).tiene_importado;
+          g_tmp(g_tmp.count).ot_estado := g_pedidos(i).ot_estado;
+          g_tmp(g_tmp.count).tiene_stock_ot := g_pedidos(i).tiene_stock_ot;
+          g_tmp(g_tmp.count).valor := g_pedidos(i).valor;
+          g_tmp(g_tmp.count).impreso := g_pedidos(i).impreso;
+          g_tmp(g_tmp.count).fch_impresion := g_pedidos(i).fch_impresion;
+          g_tmp(g_tmp.count).partir_ot := g_pedidos(i).partir_ot;
+          g_tmp(g_tmp.count).cant_partir := g_pedidos(i).cant_partir;
 
           -- detalle
-          l_tmp(l_tmp.count).cod_art := l_pedidos(i).detalle(j).cod_art;
-          l_tmp(l_tmp.count).cantidad := l_pedidos(i).detalle(j).cantidad;
-          l_tmp(l_tmp.count).rendimiento := l_pedidos(i).detalle(j).rendimiento;
-          l_tmp(l_tmp.count).saldo_stock := l_pedidos(i).detalle(j).saldo_stock;
-          l_tmp(l_tmp.count).sobrante := l_pedidos(i).detalle(j).sobrante;
-          l_tmp(l_tmp.count).faltante := l_pedidos(i).detalle(j).faltante;
-          l_tmp(l_tmp.count).linea := l_pedidos(i).detalle(j).linea;
-          l_tmp(l_tmp.count).es_importado := l_pedidos(i).detalle(j).es_importado;
-          l_tmp(l_tmp.count).tiene_stock_itm := l_pedidos(i).detalle(j).tiene_stock_itm;
-          l_tmp(l_tmp.count).stock_inicial := l_pedidos(i).detalle(j).stock_inicial;
-          l_tmp(l_tmp.count).cant_final := l_pedidos(i).detalle(j).cant_final;
+          g_tmp(g_tmp.count).cod_art := g_pedidos(i).detalle(j).cod_art;
+          g_tmp(g_tmp.count).cantidad := g_pedidos(i).detalle(j).cantidad;
+          g_tmp(g_tmp.count).rendimiento := g_pedidos(i).detalle(j).rendimiento;
+          g_tmp(g_tmp.count).saldo_stock := g_pedidos(i).detalle(j).saldo_stock;
+          g_tmp(g_tmp.count).sobrante := g_pedidos(i).detalle(j).sobrante;
+          g_tmp(g_tmp.count).faltante := g_pedidos(i).detalle(j).faltante;
+          g_tmp(g_tmp.count).linea := g_pedidos(i).detalle(j).linea;
+          g_tmp(g_tmp.count).es_importado := g_pedidos(i).detalle(j).es_importado;
+          g_tmp(g_tmp.count).tiene_stock_itm := g_pedidos(i).detalle(j).tiene_stock_itm;
+          g_tmp(g_tmp.count).stock_inicial := g_pedidos(i).detalle(j).stock_inicial;
+          g_tmp(g_tmp.count).cant_final := g_pedidos(i).detalle(j).cant_final;
         end loop;
 
       end loop;
@@ -403,14 +410,14 @@ create or replace package body surte as
     begin
       delete from tmp_ordenes_surtir;
 
-      forall i in 1 .. l_tmp.count save exceptions
-        insert into tmp_ordenes_surtir values l_tmp(i);
+      forall i in 1 .. g_tmp.count save exceptions
+        insert into tmp_ordenes_surtir values g_tmp(i);
     exception
       when bulk_errors then
         for i in 1 .. sql%bulk_exceptions.count loop
           logger.log(
-                'OA: ' || l_tmp(sql%bulk_exceptions(i).error_index).ot_numero ||
-                ' Articulo: ' || l_tmp(sql%bulk_exceptions(i).error_index).cod_art ||
+                'OA: ' || g_tmp(sql%bulk_exceptions(i).error_index).ot_numero ||
+                ' Articulo: ' || g_tmp(sql%bulk_exceptions(i).error_index).cod_art ||
                 ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
             );
         end loop;
@@ -418,7 +425,7 @@ create or replace package body surte as
         commit;
     end;
   begin
-    l_stocks := carga_stock();
+    init();
     carga_colecciones();
     consume_stock();
     desnormaliza();
