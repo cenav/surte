@@ -54,7 +54,7 @@ create or replace package body surte as
   type stock_aat is table of stock_t index by codart_t;
   type pedidos_aat is table of maestro_rt index by ranking_t;
   type tmp_aat is table of tmp_ordenes_surtir%rowtype index by pls_integer;
-  type calculo_aat is table of calculo_rt index by codart_t;
+  type calculo_aat is table of calculo_rt index by pls_integer;
 
   bulk_errors exception;
   pragma exception_init (bulk_errors, -24381);
@@ -226,9 +226,9 @@ create or replace package body surte as
       l_pedidos(p_idx).tiene_stock_ot := 'SI';
       for j in 1 .. l_pedidos(p_idx).detalle.count loop
         l_codart := l_pedidos(p_idx).detalle(j).cod_art;
-        l_pedidos(p_idx).detalle(j).stock_actual := p_calculo(l_codart).stock_actual;
-        l_pedidos(p_idx).detalle(j).saldo_stock := l_stocks(l_codart) - p_calculo(l_codart).cant_final;
-        l_pedidos(p_idx).detalle(j).cant_final := p_calculo(l_codart).cant_final;
+        l_pedidos(p_idx).detalle(j).stock_actual := p_calculo(j).stock_actual;
+        l_pedidos(p_idx).detalle(j).saldo_stock := l_stocks(l_codart) - p_calculo(j).cant_final;
+        l_pedidos(p_idx).detalle(j).cant_final := p_calculo(j).cant_final;
         l_stocks(l_pedidos(p_idx).detalle(j).cod_art) :=
               l_stocks(l_codart) - l_pedidos(p_idx).detalle(j).cant_final;
       end loop;
@@ -237,16 +237,13 @@ create or replace package body surte as
     function find_min(
       p_calculo calculo_aat
     ) return number is
-      l_codart codart_t;
-      l_min    number;
+      l_min number;
     begin
-      l_codart := p_calculo.first;
-      l_min := p_calculo(l_codart).cant_final;
-      while l_codart is not null loop
-        if p_calculo(l_codart).cant_final < l_min then
-          l_min := p_calculo(l_codart).cant_final;
+      l_min := p_calculo(1).cant_final;
+      for i in 1 .. p_calculo.count loop
+        if p_calculo(i).cant_final < l_min then
+          l_min := p_calculo(i).cant_final;
         end if;
-        l_codart := p_calculo.next(l_codart);
       end loop;
       return l_min;
     end;
@@ -256,16 +253,13 @@ create or replace package body surte as
     , p_cant_partir     number
     , o_es_partible out boolean
     ) is
-      l_codart codart_t;
     begin
-      l_codart := io_calculo.first;
-      while l_codart is not null loop
-        if p_cant_partir * io_calculo(l_codart).rendimiento <= io_calculo(l_codart).cant_final then
-          io_calculo(l_codart).cant_final := p_cant_partir * io_calculo(l_codart).rendimiento;
+      for i in 1 .. io_calculo.count loop
+        if p_cant_partir * io_calculo(i).rendimiento <= io_calculo(i).cant_final then
+          io_calculo(i).cant_final := p_cant_partir * io_calculo(i).rendimiento;
         else
           o_es_partible := false;
         end if;
-        l_codart := io_calculo.next(l_codart);
       end loop;
     end;
 
@@ -285,9 +279,9 @@ create or replace package body surte as
         l_pedidos(p_idx).cant_partir := l_cant_partir;
         for j in 1 .. l_pedidos(p_idx).detalle.count loop
           l_codart := l_pedidos(p_idx).detalle(j).cod_art;
-          l_pedidos(p_idx).detalle(j).stock_actual := io_calculo(l_codart).stock_actual;
-          l_pedidos(p_idx).detalle(j).saldo_stock := l_stocks(l_codart) - io_calculo(l_codart).cant_final;
-          l_pedidos(p_idx).detalle(j).cant_final := io_calculo(l_codart).cant_final;
+          l_pedidos(p_idx).detalle(j).stock_actual := io_calculo(j).stock_actual;
+          l_pedidos(p_idx).detalle(j).saldo_stock := l_stocks(l_codart) - io_calculo(j).cant_final;
+          l_pedidos(p_idx).detalle(j).cant_final := io_calculo(j).cant_final;
           l_stocks(l_pedidos(p_idx).detalle(j).cod_art) :=
                 l_stocks(l_codart) - l_pedidos(p_idx).detalle(j).cant_final;
         end loop;
@@ -300,7 +294,7 @@ create or replace package body surte as
     -- progresivamente en el orden dado
     procedure consume_stock is
       l_calculo         calculo_aat;
-      l_codart          codart_t;
+--       l_codart          codart_t;
       l_stock_actual    number  := 0;
       l_tiene_stock_ot  boolean := true;
       l_tiene_stock_itm boolean := true;
@@ -311,22 +305,22 @@ create or replace package body surte as
         l_calculo.delete();
 
         for j in 1 .. l_pedidos(i).detalle.count loop
-          l_codart := l_pedidos(i).detalle(j).cod_art;
-          l_stock_actual := l_stocks(l_codart);
-          l_calculo(l_codart).stock_actual := l_stock_actual;
-          l_calculo(l_codart).rendimiento := l_pedidos(i).detalle(j).rendimiento;
+          --           l_codart := l_pedidos(i).detalle(j).cod_art;
+          l_stock_actual := l_stocks(l_pedidos(i).detalle(j).cod_art);
+          l_calculo(j).stock_actual := l_stock_actual;
+          l_calculo(j).rendimiento := l_pedidos(i).detalle(j).rendimiento;
           l_tiene_stock_itm := l_stock_actual >= l_pedidos(i).detalle(j).cantidad;
 
           if l_tiene_stock_itm then
-            l_calculo(l_codart).cant_final := l_pedidos(i).detalle(j).cantidad;
+            l_calculo(j).cant_final := l_pedidos(i).detalle(j).cantidad;
           else
             l_tiene_stock_ot := false;
             -- busca partir la orden
             if l_stock_actual <= 0 then
               l_puede_partirse := false;
-              l_calculo(l_codart).cant_final := 0;
+              l_calculo(j).cant_final := 0;
             else
-              l_calculo(l_codart).cant_final := l_stock_actual;
+              l_calculo(j).cant_final := l_stock_actual;
             end if;
           end if;
 

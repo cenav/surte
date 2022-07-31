@@ -581,3 +581,11 @@ select cod_cliente, nom_cliente
  order by nom_cliente;
 
 select * from tmp_ordenes_surtir;
+
+select *
+  from tmp_ordenes_surtir
+ where partir_ot = 1;
+
+select *
+  from tmp_ordenes_surtir
+ where tiene_stock_ot = 'SI';
