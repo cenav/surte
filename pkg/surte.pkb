@@ -77,7 +77,7 @@ create or replace package body surte as
           ) as ranking
           from vw_ordenes_pedido_pendiente
                join param_surte p on p.id_param = 1
---          where numero in (782360)
+--          where numero in (801975)
         )
     select *
       from detalle
@@ -237,6 +237,7 @@ create or replace package body surte as
     begin
       g_pedidos(p_idx).tiene_stock_ot := 'SI';
       g_pedidos(p_idx).valor_surtir := g_pedidos(p_idx).valor;
+      g_pedidos(p_idx).partir_ot := 0;
       for j in 1 .. g_pedidos(p_idx).detalle.count loop
         l_codart := g_pedidos(p_idx).detalle(j).cod_art;
         g_pedidos(p_idx).detalle(j).stock_actual := p_calculo(j).stock_actual;
@@ -320,6 +321,7 @@ create or replace package body surte as
     begin
       for i in 1 .. g_pedidos.count loop
         l_tiene_stock_ot := true;
+        l_puede_partirse := true;
         l_calculo.delete();
 
         for j in 1 .. g_pedidos(i).detalle.count loop

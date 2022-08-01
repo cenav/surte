@@ -550,7 +550,6 @@ select sum(d.valor)
 select sum(d.valor)
   from detalle d;
 
-call surte.por_item();
 
 select * from grupo_cliente;
 
@@ -581,17 +580,24 @@ select *
 
 select *
   from tmp_ordenes_surtir
- where partir_ot = 1;
+ where tiene_stock_ot = 'SI';
 
 select *
   from tmp_ordenes_surtir
- where tiene_stock_ot = 'SI';
+ where partir_ot = 1;
 
 select * from param_surte;
+
+call surte.por_item();
 
 -- detalle piezas
 select ranking, nom_cliente, nro_pedido, itm_pedido, ot_numero, formu_art, valor, valor_surtir, es_juego
      , partir_ot, tiene_stock_ot, cod_art, cantidad, rendimiento, stock_inicial, cant_final, saldo_stock
      , linea, es_importado, tiene_stock_itm
   from tmp_ordenes_surtir
+--  where cod_art = '380.722'
  order by ranking;
+
+select *
+  from tmp_ordenes_surtir
+ where partir_ot is null;
