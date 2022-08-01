@@ -61,7 +61,7 @@ create or replace package body surte as
   bulk_errors exception;
   pragma exception_init (bulk_errors, -24381);
 
-  cursor pedidos_cur(p_valor number) is
+  cursor pedidos_cur is
     -- pedidos de clientes ordenados primero por juegos, luego de mayor a menor valor
       with detalle as (
         select cod_cliente, nombre, fch_pedido, pedido, pedido_item, nuot_serie, nuot_tipoot_codigo
@@ -359,7 +359,7 @@ create or replace package body surte as
 
     procedure carga_colecciones is
     begin
-      for r in pedidos_cur(g_param.valor_item) loop
+      for r in pedidos_cur loop
         -- para el primer quiebre de grupo (item pedido)
         -- normaliza la data
         if r.oa is not null then
