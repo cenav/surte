@@ -587,6 +587,8 @@ select *
   from tmp_ordenes_surtir
  where tiene_stock_ot = 'SI';
 
+select * from param_surte;
+
 -- detalle piezas
 select ranking, nom_cliente, nro_pedido, itm_pedido, ot_numero, formu_art, valor, valor_surtir, es_juego
      , partir_ot, tiene_stock_ot, cod_art, cantidad, rendimiento, stock_inicial, cant_final, saldo_stock

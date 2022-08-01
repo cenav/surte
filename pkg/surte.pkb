@@ -42,7 +42,9 @@ create or replace package body surte as
     formu_art       tmp_ordenes_surtir.formu_art%type,
     es_juego        tmp_ordenes_surtir.es_juego%type,
     tiene_importado tmp_ordenes_surtir.tiene_importado%type,
+    preuni          tmp_ordenes_surtir.preuni%type,
     valor           tmp_ordenes_surtir.valor%type,
+    valor_surtir    tmp_ordenes_surtir.valor_surtir%type,
     impreso         tmp_ordenes_surtir.impreso%type,
     fch_impresion   tmp_ordenes_surtir.fch_impresion%type,
     partir_ot       tmp_ordenes_surtir.partir_ot%type,
@@ -64,17 +66,18 @@ create or replace package body surte as
       with detalle as (
         select cod_cliente, nombre, fch_pedido, pedido, pedido_item, nuot_serie, nuot_tipoot_codigo
              , numero, fecha, formu_art_cod_art, estado, art_cod_art, cant_formula, rendimiento, saldo
-             , despachar, cod_lin, abre02, valor, stock, tiene_stock, tiene_stock_ot
+             , despachar, cod_lin, abre02, preuni, valor, stock, tiene_stock, tiene_stock_ot
              , tiene_stock_item, tiene_importado, impreso, fch_impresion, es_juego, es_importado
              , case when lag(numero) over (order by null) = numero then null else numero end oa
              , dense_rank() over (
-          order by es_prioritario desc
-            , case when valor > p_valor then 1 else 0 end desc
+          order by case when p.prioritario = 1 then es_prioritario end desc
+            , case when valor > p.valor_item then 1 else 0 end desc
             , es_juego
             , valor desc
           ) as ranking
           from vw_ordenes_pedido_pendiente
-         where numero in (782360)
+               join param_surte p on p.id_param = 1
+--          where numero in (782360)
         )
     select *
       from detalle
@@ -182,6 +185,7 @@ create or replace package body surte as
       g_pedidos(r.ranking).nro_pedido := r.pedido;
       g_pedidos(r.ranking).itm_pedido := r.pedido_item;
       g_pedidos(r.ranking).fch_pedido := r.fch_pedido;
+      g_pedidos(r.ranking).preuni := r.preuni;
       g_pedidos(r.ranking).valor := r.valor;
       g_pedidos(r.ranking).ot_tipo := r.nuot_tipoot_codigo;
       g_pedidos(r.ranking).ot_serie := r.nuot_serie;
@@ -232,6 +236,7 @@ create or replace package body surte as
       l_codart codart_t;
     begin
       g_pedidos(p_idx).tiene_stock_ot := 'SI';
+      g_pedidos(p_idx).valor_surtir := g_pedidos(p_idx).valor;
       for j in 1 .. g_pedidos(p_idx).detalle.count loop
         l_codart := g_pedidos(p_idx).detalle(j).cod_art;
         g_pedidos(p_idx).detalle(j).stock_actual := p_calculo(j).stock_actual;
@@ -276,16 +281,21 @@ create or replace package body surte as
       p_idx             pls_integer
     , io_calculo in out calculo_aat
     ) is
-      l_codart      codart_t;
-      l_cant_partir number;
-      l_es_partible boolean;
+      l_codart           codart_t;
+      l_cant_partir      number;
+      l_valor_surtir     number;
+      l_es_partible      boolean;
+      l_cumple_valor_min boolean;
     begin
       g_pedidos(p_idx).tiene_stock_ot := 'NO';
       l_cant_partir := find_min(io_calculo);
       prueba_partir(io_calculo, l_cant_partir, l_es_partible);
-      if l_es_partible then
+      l_valor_surtir := l_cant_partir * g_pedidos(p_idx).preuni;
+      l_cumple_valor_min := l_valor_surtir > g_param.valor_partir;
+      if l_es_partible and l_cumple_valor_min then
         g_pedidos(p_idx).partir_ot := 1;
         g_pedidos(p_idx).cant_partir := l_cant_partir;
+        g_pedidos(p_idx).valor_surtir := l_valor_surtir;
         for j in 1 .. g_pedidos(p_idx).detalle.count loop
           l_codart := g_pedidos(p_idx).detalle(j).cod_art;
           g_pedidos(p_idx).detalle(j).stock_actual := io_calculo(j).stock_actual;
@@ -323,11 +333,11 @@ create or replace package body surte as
           else
             l_tiene_stock_ot := false;
             -- busca partir la orden
-            if l_stock_actual <= 0 then
+            if l_stock_actual > 0 then
+              l_calculo(j).cant_final := l_stock_actual;
+            else
               l_puede_partirse := false;
               l_calculo(j).cant_final := 0;
-            else
-              l_calculo(j).cant_final := l_stock_actual;
             end if;
           end if;
 
@@ -384,6 +394,7 @@ create or replace package body surte as
           g_tmp(g_tmp.count).ot_estado := g_pedidos(i).ot_estado;
           g_tmp(g_tmp.count).tiene_stock_ot := g_pedidos(i).tiene_stock_ot;
           g_tmp(g_tmp.count).valor := g_pedidos(i).valor;
+          g_tmp(g_tmp.count).valor_surtir := g_pedidos(i).valor_surtir;
           g_tmp(g_tmp.count).impreso := g_pedidos(i).impreso;
           g_tmp(g_tmp.count).fch_impresion := g_pedidos(i).fch_impresion;
           g_tmp(g_tmp.count).partir_ot := g_pedidos(i).partir_ot;
