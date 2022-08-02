@@ -64,19 +64,22 @@ create or replace package body surte as
   cursor pedidos_cur is
     -- pedidos de clientes ordenados primero por juegos, luego de mayor a menor valor
       with detalle as (
-        select cod_cliente, nombre, fch_pedido, pedido, pedido_item, nuot_serie, nuot_tipoot_codigo
-             , numero, fecha, formu_art_cod_art, estado, art_cod_art, cant_formula, rendimiento, saldo
-             , despachar, cod_lin, abre02, preuni, valor, stock, tiene_stock, tiene_stock_ot
-             , tiene_stock_item, tiene_importado, impreso, fch_impresion, es_juego, es_importado
-             , case when lag(numero) over (order by null) = numero then null else numero end oa
+        select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
+             , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
+             , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
+             , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
+             , v.fch_impresion, v.es_juego, v.es_importado
+             , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
              , dense_rank() over (
-          order by case when p.prioritario = 1 then es_prioritario end desc
-            , case when valor > p.valor_item then 1 else 0 end desc
-            , es_juego
-            , valor desc
+          order by case when p.prioritario = 1 then v.es_prioritario end desc
+            , case when v.valor > p.valor_item then 1 else 0 end desc
+            , v.es_juego
+            , v.valor desc
           ) as ranking
-          from vw_ordenes_pedido_pendiente
+          from vw_ordenes_pedido_pendiente v
                join param_surte p on p.id_param = 1
+         where (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
+                not exists(select * from tmp_selecciona_cliente))
 --          where numero in (801975)
         )
     select *

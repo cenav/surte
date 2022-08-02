@@ -3,7 +3,6 @@ select * from vw_ordenes_pedido_pendiente where pedido = 15026;
 select pedido, numero, nuot_serie, nuot_tipoot_codigo, fecha, jaba, estado, art_cod_art, cant_formula, saldo
      , despachar, cod_lin, formu_art_cod_art, abre02, stock, tiene_stock, tiene_stock_ot, tiene_stock_item
   from vw_ordenes_pedido_pendiente
-
  where pedido = 12520;
 
 select * from tmp_pedidos_30;
