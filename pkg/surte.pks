@@ -4,5 +4,8 @@ create or replace package surte as
   , p_opcion  opcion_enum.t_opcion
   );
 
-  procedure por_item;
+  procedure por_item(
+    p_pais     varchar2 default null
+  , p_vendedor varchar2 default null
+  );
 end surte;

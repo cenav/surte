@@ -600,3 +600,11 @@ select ranking, nom_cliente, nro_pedido, itm_pedido, ot_numero, formu_art, valor
 select *
   from tmp_ordenes_surtir
  where partir_ot is null;
+
+select pais, nombre
+  from expaises
+ order by nombre;
+
+select *
+  from expedidos
+ where numero = 12447;

@@ -61,7 +61,7 @@ create or replace package body surte as
   bulk_errors exception;
   pragma exception_init (bulk_errors, -24381);
 
-  cursor pedidos_cur is
+  cursor pedidos_cur(p_pais varchar2, p_vendedor varchar2) is
     -- pedidos de clientes ordenados primero por juegos, luego de mayor a menor valor
       with detalle as (
         select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
@@ -78,7 +78,9 @@ create or replace package body surte as
           ) as ranking
           from vw_ordenes_pedido_pendiente v
                join param_surte p on p.id_param = 1
-         where (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
+         where (v.pais = p_pais or p_pais is null)
+           and (v.zona = p_vendedor or p_vendedor is null)
+           and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
                 not exists(select * from tmp_selecciona_cliente))
 --          where numero in (801975)
         )
@@ -135,7 +137,10 @@ create or replace package body surte as
     commit;
   end;
 
-  procedure por_item is
+  procedure por_item(
+    p_pais     varchar2 default null
+  , p_vendedor varchar2 default null
+  ) is
     g_stocks  stock_aat;
     g_pedidos pedidos_aat;
     g_tmp     tmp_aat;
@@ -364,7 +369,7 @@ create or replace package body surte as
 
     procedure carga_colecciones is
     begin
-      for r in pedidos_cur loop
+      for r in pedidos_cur(p_pais, p_vendedor) loop
         -- para el primer quiebre de grupo (item pedido)
         -- normaliza la data
         if r.oa is not null then
