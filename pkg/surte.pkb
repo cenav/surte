@@ -1,4 +1,6 @@
 create or replace package body surte as
+  gc_multiplo_partir constant simple_integer := 5;
+
   subtype string_t is varchar2(32672);
   subtype stock_t is number;
   subtype codart_t is articul.cod_art%type;
@@ -79,7 +81,7 @@ create or replace package body surte as
           from vw_ordenes_pedido_pendiente v
                join param_surte p on p.id_param = 1
          where (v.pais = p_pais or p_pais is null)
-           and (v.zona = p_vendedor or p_vendedor is null)
+           and (v.vendedor = p_vendedor or p_vendedor is null)
            and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
                 not exists(select * from tmp_selecciona_cliente))
 --          where numero in (801975)
@@ -167,13 +169,6 @@ create or replace package body surte as
     ) is
     begin
       g_stocks(p_codart) := g_stocks(p_codart) + p_cant;
-    end;
-
-    function sobrante(
-      p_stock_actual number
-    ) return number is
-    begin
-      return case when p_stock_actual >= 0 then p_stock_actual else 0 end;
     end;
 
     function faltante(
@@ -297,10 +292,10 @@ create or replace package body surte as
       l_cumple_valor_min boolean;
     begin
       g_pedidos(p_idx).tiene_stock_ot := 'NO';
-      l_cant_partir := find_min(io_calculo);
+      l_cant_partir := multiplo.inferior(find_min(io_calculo), gc_multiplo_partir);
       prueba_partir(io_calculo, l_cant_partir, l_es_partible);
       l_valor_surtir := l_cant_partir * g_pedidos(p_idx).preuni;
-      l_cumple_valor_min := l_valor_surtir > g_param.valor_partir;
+      l_cumple_valor_min := l_valor_surtir >= g_param.valor_partir;
       if l_es_partible and l_cumple_valor_min then
         g_pedidos(p_idx).partir_ot := 1;
         g_pedidos(p_idx).cant_partir := l_cant_partir;

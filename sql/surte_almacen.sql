@@ -601,10 +601,34 @@ select *
   from tmp_ordenes_surtir
  where partir_ot is null;
 
-select pais, nombre
+select pais, nombre, zona
   from expaises
  order by nombre;
 
 select *
   from expedidos
  where numero = 12447;
+
+select codigo, descripcion
+  from tablas_auxiliares
+ where tipo = 25
+ order by descripcion;
+
+select *
+  from vw_ordenes_pedido_pendiente
+ where pedido = 12273;
+
+select *
+  from expaises
+ where pais = '51';
+
+select codigo, descripcion
+  from extablas_expo
+ where tipo = '13'
+   and codigo <> '....'
+   and codigo in ('02', '05')
+ order by 1;
+
+begin
+  dbms_output.put_line(multiplo.inferior(33, 5));
+end;
