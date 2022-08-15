@@ -7,5 +7,6 @@ create or replace package surte as
   procedure por_item(
     p_pais     varchar2 default null
   , p_vendedor varchar2 default null
+  , p_dias     pls_integer default null
   );
 end surte;
