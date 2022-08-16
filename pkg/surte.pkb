@@ -450,5 +450,127 @@ create or replace package body surte as
     guarda();
     commit;
   end;
+
+  procedure parte_ot is
+    function nuevo_numero(
+      p_tipo  pr_num_ot.tipoot_codigo%type
+    , p_serie pr_num_ot.serie%type
+    ) return pr_ot.numero%type is
+      l_nro pr_ot.numero%type;
+    begin
+      select numero + 1
+        into l_nro
+        from pr_num_ot
+       where tipoot_codigo = p_tipo
+         and serie = p_serie
+         for update of numero;
+
+      update pr_num_ot
+         set numero = l_nro
+       where tipoot_codigo = p_tipo
+         and serie = p_serie;
+
+      return l_nro;
+    end;
+
+    function crea_item_pedido_exp(
+      p_numero      expedido_d.numero%type
+    , p_item        expedido_d.nro%type
+    , p_cant_partir expedido_d.canti%type
+    , p_cant_sobra  expedido_d.canti%type
+    ) return expedido_d%rowtype is
+      l_old_item_ped expedido_d%rowtype;
+      l_new_item_ped expedido_d%rowtype;
+
+      function crea_nuevo(
+        p_old_item_ped expedido_d%rowtype
+      ) return expedido_d%rowtype is
+        l_new expedido_d%rowtype;
+      begin
+        l_new := p_old_item_ped;
+        l_new.nro := api_expedido_d.next_key(p_numero);
+        l_new.canti := p_cant_sobra;
+        l_new.totlin := p_cant_sobra * l_new.preuni;
+        l_new.saldo_ot := p_cant_sobra;
+        l_new.saldo_pk := p_cant_sobra;
+        l_new.estado_pk := 'A1';
+        l_new.indicador_armado := 'S';
+        api_expedido_d.ins(l_new);
+        return l_new;
+      end;
+
+      procedure actualiza_antiguo(
+        p_old_item_ped expedido_d%rowtype
+      ) is
+        l_old expedido_d%rowtype;
+      begin
+        l_old := p_old_item_ped;
+        l_old.canti := p_cant_partir;
+        l_old.totlin := p_cant_partir * p_old_item_ped.preuni;
+        l_old.saldo_pk := p_cant_partir;
+        api_expedido_d.upd(l_old);
+      end;
+    begin
+      l_old_item_ped := api_expedido_d.onerow(p_numero, p_item);
+      l_new_item_ped := crea_nuevo(l_old_item_ped);
+      actualiza_antiguo(l_old_item_ped);
+      return l_new_item_ped;
+    end;
+
+    procedure crea_item_pedido_nac(
+      p_numero      expednac_d.numero%type
+    , p_item        expednac_d.nro%type
+    , p_cant_partir expedido_d.canti%type
+    , p_cant_sobra  expedido_d.canti%type
+    ) is
+    begin
+      null;
+    end;
+
+    procedure guarda_ot(
+      p_ot         pr_ot%rowtype
+    , p_item_ped   expedido_d%rowtype
+    , p_cant_sobra number
+    ) is
+      l_nro pr_ot.numero%type;
+    begin
+      l_nro := nuevo_numero(p_ot.nuot_tipoot_codigo, p_ot.nuot_serie);
+
+      insert into pr_ot
+      values ( l_nro, sysdate, 1, p_cant_sobra, p_ot.nuot_serie
+             , p_ot.nuot_tipoot_codigo, 'ORDEN :' || p_ot.numero, 0, null, null
+             , null, 'S', 1, 0, p_ot.formu_art_cod_art
+             , 1, p_ot.cdc_centro_costo, null, 0, 'S'
+             , null, null, 0, p_ot.hora_fab, null
+             , null, null, p_item_ped.nro, null, null
+             , null, p_item_ped.numero, p_ot.abre02, null, p_ot.destino
+             , p_ot.plazo, p_ot.fecha_plazo, p_ot.cod_eqi, p_ot.pais, p_ot.empaque
+             , user, 'PARTIDA', p_ot.embalaje, p_ot.prioridad, 0
+             , p_ot.fecha_prioridad, p_ot.cod_lin, 0, 0, 0);
+    end;
+
+    procedure crea_nueva_ot(
+      r tmp_ordenes_surtir%rowtype
+    ) is
+      l_item_ped   expedido_d%rowtype;
+      l_ot         pr_ot%rowtype;
+      l_cant_sobra pr_ot.cant_prog%type;
+    begin
+      l_ot := api_pr_ot.onerow(r.ot_numero, r.ot_serie, r.ot_tipo);
+      l_cant_sobra := l_ot.cant_prog - r.cant_partir;
+
+      if l_ot.destino = '1' then
+        l_item_ped := crea_item_pedido_exp(l_ot.abre01, l_ot.per_env, r.cant_partir, l_cant_sobra);
+      else
+        crea_item_pedido_nac(l_ot.abre01, l_ot.per_env, r.cant_partir, l_cant_sobra);
+      end if;
+
+      guarda_ot(l_ot, l_item_ped, l_cant_sobra);
+    end;
+
+  begin
+    for r in (select * from tmp_ordenes_surtir where partir_ot = 1 order by ranking) loop
+      crea_nueva_ot(r);
+    end loop;
+  end;
 end surte;
-/
