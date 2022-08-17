@@ -524,18 +524,52 @@ create or replace package body surte as
       return l_new_item_ped;
     end;
 
-    procedure crea_item_pedido_nac(
+    function crea_item_pedido_nac(
       p_numero     expednac_d.numero%type
     , p_item       expednac_d.nro%type
-    , p_cant_sobra expedido_d.canti%type
-    ) is
+    , p_cant_sobra expednac_d.canti%type
+    ) return expednac_d%rowtype is
+      l_old_item_ped expednac_d%rowtype;
+      l_new_item_ped expednac_d%rowtype;
+
+      function crea_nuevo(
+        p_old_item_ped expednac_d%rowtype
+      ) return expednac_d%rowtype is
+        l_new expednac_d%rowtype;
+      begin
+        l_new := p_old_item_ped;
+        l_new.nro := api_expednac_d.next_key(p_numero);
+        l_new.canti := p_cant_sobra;
+        l_new.totlin := p_cant_sobra * l_new.preuni;
+        l_new.saldo_ot := p_cant_sobra;
+        l_new.saldo_pk := p_cant_sobra;
+        l_new.estado_pk := 'A1';
+        api_expednac_d.ins(l_new);
+        return l_new;
+      end;
+
+      procedure actualiza_antiguo(
+        p_old_item_ped expednac_d%rowtype
+      ) is
+        l_old expednac_d%rowtype;
+      begin
+        l_old := p_old_item_ped;
+        l_old.canti := p_cant_partir;
+        l_old.totlin := p_cant_partir * p_old_item_ped.preuni;
+        l_old.saldo_pk := p_cant_partir;
+        api_expednac_d.upd(l_old);
+      end;
     begin
-      null;
+      l_old_item_ped := api_expednac_d.onerow(p_numero, p_item);
+      l_new_item_ped := crea_nuevo(l_old_item_ped);
+      actualiza_antiguo(l_old_item_ped);
+      return l_new_item_ped;
     end;
 
     procedure guarda_ot(
       p_ot         pr_ot%rowtype
-    , p_item_ped   expedido_d%rowtype
+    , p_ped_nro    expedido_d.numero%type
+    , p_ped_itm    expedido_d.nro%type
     , p_cant_sobra number
     ) is
     begin
@@ -547,8 +581,8 @@ create or replace package body surte as
              , null, 'S', 1, 0, p_ot.formu_art_cod_art
              , 1, p_ot.cdc_centro_costo, null, 0, 'S'
              , null, null, 0, p_ot.hora_fab, null
-             , null, null, p_item_ped.nro, null, null
-             , null, p_item_ped.numero, p_ot.abre02, null, p_ot.destino
+             , null, null, p_ped_itm, null, null
+             , null, p_ped_nro, p_ot.abre02, null, p_ot.destino
              , p_ot.plazo, p_ot.fecha_plazo, p_ot.cod_eqi, p_ot.pais, p_ot.empaque
              , user, 'PARTIDA', p_ot.embalaje, p_ot.prioridad, 0
              , p_ot.fecha_prioridad, p_ot.cod_lin, 0, 0, 0);
@@ -557,15 +591,16 @@ create or replace package body surte as
     procedure crea_nueva_ot(
       p_cant_sobra number
     ) is
-      l_item_ped expedido_d%rowtype;
+      l_ped_exp expedido_d%rowtype;
+      l_ped_nac expednac_d%rowtype;
     begin
       if g_ot.destino = '1' then
-        l_item_ped := crea_item_pedido_exp(g_ot.abre01, g_ot.per_env, p_cant_sobra);
+        l_ped_exp := crea_item_pedido_exp(g_ot.abre01, g_ot.per_env, p_cant_sobra);
+        guarda_ot(g_ot, l_ped_exp.numero, l_ped_exp.nro, p_cant_sobra);
       else
-        crea_item_pedido_nac(g_ot.abre01, g_ot.per_env, p_cant_sobra);
+        l_ped_nac := crea_item_pedido_nac(g_ot.abre01, g_ot.per_env, p_cant_sobra);
+        guarda_ot(g_ot, l_ped_nac.numero, l_ped_nac.nro, p_cant_sobra);
       end if;
-
-      guarda_ot(g_ot, l_item_ped, p_cant_sobra);
     end;
 
     procedure crea_detalle_orden(
