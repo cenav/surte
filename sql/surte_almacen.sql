@@ -173,8 +173,8 @@ select *
 
 select *
   from pr_ot
- where nuot_tipoot_codigo = 'AR'
-   and numero = 704407;
+ where nuot_tipoot_codigo = 'PR'
+   and numero = 449402;
 
 select max(fecha)
   from pr_ot_impresion
@@ -662,3 +662,8 @@ select *
 select * from param_surte;
 
 select * from grupo_cliente;
+
+select *
+  from pr_formu
+ where art_cod_art = '95037CS-1'
+   and receta = 1;

@@ -457,6 +457,9 @@ create or replace package body surte as
   , p_numero      pr_ot.numero%type
   , p_cant_partir pr_ot.cant_prog%type
   ) is
+    g_ot  pr_ot%rowtype;
+    g_nro pr_ot.numero%type;
+
     function nuevo_numero(
       p_tipo  pr_num_ot.tipoot_codigo%type
     , p_serie pr_num_ot.serie%type
@@ -479,9 +482,9 @@ create or replace package body surte as
     end;
 
     function crea_item_pedido_exp(
-      p_numero      expedido_d.numero%type
-    , p_item        expedido_d.nro%type
-    , p_cant_sobra  expedido_d.canti%type
+      p_numero     expedido_d.numero%type
+    , p_item       expedido_d.nro%type
+    , p_cant_sobra expedido_d.canti%type
     ) return expedido_d%rowtype is
       l_old_item_ped expedido_d%rowtype;
       l_new_item_ped expedido_d%rowtype;
@@ -522,9 +525,9 @@ create or replace package body surte as
     end;
 
     procedure crea_item_pedido_nac(
-      p_numero      expednac_d.numero%type
-    , p_item        expednac_d.nro%type
-    , p_cant_sobra  expedido_d.canti%type
+      p_numero     expednac_d.numero%type
+    , p_item       expednac_d.nro%type
+    , p_cant_sobra expedido_d.canti%type
     ) is
     begin
       null;
@@ -535,12 +538,11 @@ create or replace package body surte as
     , p_item_ped   expedido_d%rowtype
     , p_cant_sobra number
     ) is
-      l_nro pr_ot.numero%type;
     begin
-      l_nro := nuevo_numero(p_ot.nuot_tipoot_codigo, p_ot.nuot_serie);
+      g_nro := nuevo_numero(p_ot.nuot_tipoot_codigo, p_ot.nuot_serie);
 
       insert into pr_ot
-      values ( l_nro, sysdate, 1, p_cant_sobra, p_ot.nuot_serie
+      values ( g_nro, sysdate, 1, p_cant_sobra, p_ot.nuot_serie
              , p_ot.nuot_tipoot_codigo, 'ORDEN :' || p_ot.numero, 0, null, null
              , null, 'S', 1, 0, p_ot.formu_art_cod_art
              , 1, p_ot.cdc_centro_costo, null, 0, 'S'
@@ -552,30 +554,55 @@ create or replace package body surte as
              , p_ot.fecha_prioridad, p_ot.cod_lin, 0, 0, 0);
     end;
 
-    procedure crea_nueva_ot is
-      l_item_ped   expedido_d%rowtype;
-      l_ot         pr_ot%rowtype;
-      l_cant_sobra pr_ot.cant_prog%type;
+    procedure crea_nueva_ot(
+      p_cant_sobra number
+    ) is
+      l_item_ped expedido_d%rowtype;
     begin
-      l_ot := api_pr_ot.onerow(p_numero, p_serie, p_tipo);
-      l_cant_sobra := l_ot.cant_prog - p_cant_partir;
-
-      if l_ot.destino = '1' then
-        l_item_ped := crea_item_pedido_exp(l_ot.abre01, l_ot.per_env, l_cant_sobra);
+      if g_ot.destino = '1' then
+        l_item_ped := crea_item_pedido_exp(g_ot.abre01, g_ot.per_env, p_cant_sobra);
       else
-        crea_item_pedido_nac(l_ot.abre01, l_ot.per_env, l_cant_sobra);
+        crea_item_pedido_nac(g_ot.abre01, g_ot.per_env, p_cant_sobra);
       end if;
 
-      guarda_ot(l_ot, l_item_ped, l_cant_sobra);
+      guarda_ot(g_ot, l_item_ped, p_cant_sobra);
     end;
 
-    procedure crea_detalle_orden is
+    procedure crea_detalle_orden(
+      p_cant_sobra number
+    ) is
+      l_articulo   articul%rowtype;
+      l_formula    pr_formu%rowtype;
+      l_cant_total number := 0;
     begin
-      null;
+      for r in (
+        select *
+          from pr_ot_det
+         where ot_nuot_tipoot_codigo = p_tipo
+           and ot_nuot_serie = p_serie
+           and ot_numero = p_numero
+        )
+      loop
+        l_articulo := api_articul.onerow(r.art_cod_art);
+        l_formula := api_pr_formu.onerow(r.art_cod_art, 1);
+        l_cant_total := round((p_cant_sobra * r.rendimiento) / l_formula.lote, 2);
+
+        insert into pr_ot_det
+        values ( l_cant_total, r.cant_usada, r.cost_formula, r.cost_usada, r.almacen
+               , g_nro, g_ot.nuot_serie, g_ot.nuot_tipoot_codigo, r.art_cod_art, r.cant_despachada
+               , r.rendimiento, l_articulo.cod_lin, r.pr_secuencia, r.flag_kardex, 1
+               , r.prioridad, r.fecha_prioridad, 0, 0);
+      end loop;
     end;
   begin
-    crea_nueva_ot();
-    crea_detalle_orden();
+    declare
+      l_cant_sobra pr_ot.cant_prog%type;
+    begin
+      g_ot := api_pr_ot.onerow(p_numero, p_serie, p_tipo);
+      l_cant_sobra := g_ot.cant_prog - p_cant_partir;
+      crea_nueva_ot(l_cant_sobra);
+      crea_detalle_orden(l_cant_sobra);
+    end;
   end;
 
   procedure parte_ot_masivo is
