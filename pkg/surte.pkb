@@ -451,7 +451,12 @@ create or replace package body surte as
     commit;
   end;
 
-  procedure parte_ot is
+  procedure parte_ot(
+    p_tipo        pr_ot.nuot_tipoot_codigo%type
+  , p_serie       pr_ot.nuot_serie%type
+  , p_numero      pr_ot.numero%type
+  , p_cant_partir pr_ot.cant_prog%type
+  ) is
     function nuevo_numero(
       p_tipo  pr_num_ot.tipoot_codigo%type
     , p_serie pr_num_ot.serie%type
@@ -476,7 +481,6 @@ create or replace package body surte as
     function crea_item_pedido_exp(
       p_numero      expedido_d.numero%type
     , p_item        expedido_d.nro%type
-    , p_cant_partir expedido_d.canti%type
     , p_cant_sobra  expedido_d.canti%type
     ) return expedido_d%rowtype is
       l_old_item_ped expedido_d%rowtype;
@@ -520,7 +524,6 @@ create or replace package body surte as
     procedure crea_item_pedido_nac(
       p_numero      expednac_d.numero%type
     , p_item        expednac_d.nro%type
-    , p_cant_partir expedido_d.canti%type
     , p_cant_sobra  expedido_d.canti%type
     ) is
     begin
@@ -549,28 +552,36 @@ create or replace package body surte as
              , p_ot.fecha_prioridad, p_ot.cod_lin, 0, 0, 0);
     end;
 
-    procedure crea_nueva_ot(
-      r tmp_ordenes_surtir%rowtype
-    ) is
+    procedure crea_nueva_ot is
       l_item_ped   expedido_d%rowtype;
       l_ot         pr_ot%rowtype;
       l_cant_sobra pr_ot.cant_prog%type;
     begin
-      l_ot := api_pr_ot.onerow(r.ot_numero, r.ot_serie, r.ot_tipo);
-      l_cant_sobra := l_ot.cant_prog - r.cant_partir;
+      l_ot := api_pr_ot.onerow(p_numero, p_serie, p_tipo);
+      l_cant_sobra := l_ot.cant_prog - p_cant_partir;
 
       if l_ot.destino = '1' then
-        l_item_ped := crea_item_pedido_exp(l_ot.abre01, l_ot.per_env, r.cant_partir, l_cant_sobra);
+        l_item_ped := crea_item_pedido_exp(l_ot.abre01, l_ot.per_env, l_cant_sobra);
       else
-        crea_item_pedido_nac(l_ot.abre01, l_ot.per_env, r.cant_partir, l_cant_sobra);
+        crea_item_pedido_nac(l_ot.abre01, l_ot.per_env, l_cant_sobra);
       end if;
 
       guarda_ot(l_ot, l_item_ped, l_cant_sobra);
     end;
 
+    procedure crea_detalle_orden is
+    begin
+      null;
+    end;
+  begin
+    crea_nueva_ot();
+    crea_detalle_orden();
+  end;
+
+  procedure parte_ot_masivo is
   begin
     for r in (select * from tmp_ordenes_surtir where partir_ot = 1 order by ranking) loop
-      crea_nueva_ot(r);
+      parte_ot(r.ot_tipo, r.ot_serie, r.ot_numero, r.cant_partir);
     end loop;
   end;
 end surte;
