@@ -668,12 +668,3 @@ select *
  where art_cod_art = '95037CS-1'
    and receta = 1;
 
-insert into expednac_d( numero, nro, id, cod_cliente, fecha
-                      , cod_eqi, cod_art, descri1, descri2, descri3
-                      , partida, cantp, canti, preuni, saldo
-                      , totlin, saldo_ot, saldo_pk, estado_pk)
-values ( rec.numero, x_nuevo_item, rec.id, rec.cod_cliente, rec.fecha
-       , rec.cod_eqi, rec.cod_art, rec.descri1, rec.descri2, rec.descri3
-       , rec.partida, rec.cantp, x_nueva_cantidad_programada, rec.preuni, rec.saldo
-       , (x_nueva_cantidad_programada * rec.preuni), x_nueva_cantidad_programada, x_nueva_cantidad_programada
-       , 'A1');

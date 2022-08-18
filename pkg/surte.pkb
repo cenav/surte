@@ -588,7 +588,7 @@ create or replace package body surte as
              , p_ot.fecha_prioridad, p_ot.cod_lin, 0, 0, 0);
     end;
 
-    procedure crea_nueva_ot(
+    procedure crea_maestro_ot(
       p_cant_sobra number
     ) is
       l_ped_exp expedido_d%rowtype;
@@ -603,7 +603,7 @@ create or replace package body surte as
       end if;
     end;
 
-    procedure crea_detalle_orden(
+    procedure crea_detalle_ot(
       p_cant_sobra number
     ) is
       l_articulo   articul%rowtype;
@@ -616,6 +616,7 @@ create or replace package body surte as
          where ot_nuot_tipoot_codigo = p_tipo
            and ot_nuot_serie = p_serie
            and ot_numero = p_numero
+           and nvl(estado, '0') != '9'
         )
       loop
         l_articulo := api_articul.onerow(r.art_cod_art);
@@ -629,6 +630,54 @@ create or replace package body surte as
                , r.prioridad, r.fecha_prioridad, 0, 0);
       end loop;
     end;
+
+    procedure crea_nueva_ot(
+      p_cant_sobra number
+    ) is
+    begin
+      crea_maestro_ot(p_cant_sobra);
+      crea_detalle_ot(p_cant_sobra);
+    end;
+
+    procedure actualiza_maestro(
+      p_cant_parte number
+    ) is
+      l_old pr_ot%rowtype;
+    begin
+      l_old := g_ot;
+      l_old.cant_prog := p_cant_parte;
+      api_pr_ot.upd(l_old);
+    end;
+
+    procedure actualiza_detalle(
+      p_cant_parte number
+    ) is
+      l_old     pr_ot_det%rowtype;
+      l_formula pr_formu%rowtype;
+    begin
+      for r in (
+        select *
+          from pr_ot_det
+         where ot_nuot_tipoot_codigo = p_tipo
+           and ot_nuot_serie = p_serie
+           and ot_numero = p_numero
+           and nvl(estado, '0') != '9'
+        )
+      loop
+        l_old := r;
+        l_formula := api_pr_formu.onerow(r.art_cod_art, 1);
+        l_old.cant_formula := round((p_cant_parte * r.rendimiento) / l_formula.lote, 2);
+        api_pr_ot_det.upd(l_old);
+      end loop;
+    end;
+
+    procedure actualiza_antigua_ot(
+      p_cant_parte number
+    ) is
+    begin
+      actualiza_maestro(p_cant_parte);
+      actualiza_detalle(p_cant_parte);
+    end;
   begin
     declare
       l_cant_sobra pr_ot.cant_prog%type;
@@ -636,7 +685,7 @@ create or replace package body surte as
       g_ot := api_pr_ot.onerow(p_numero, p_serie, p_tipo);
       l_cant_sobra := g_ot.cant_prog - p_cant_partir;
       crea_nueva_ot(l_cant_sobra);
-      crea_detalle_orden(l_cant_sobra);
+      actualiza_antigua_ot(p_cant_partir);
     end;
   end;
 
