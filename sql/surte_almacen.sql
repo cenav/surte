@@ -668,3 +668,17 @@ select *
  where art_cod_art = '95037CS-1'
    and receta = 1;
 
+select *
+  from pr_ot
+ where nuot_tipoot_codigo = 'AR'
+   and nuot_serie = '3'
+   and numero = 785221;
+
+call surte.parte_ot(p_tipo => 'AR', p_serie => '3', p_numero => 785207, p_cant_partir => 4000);
+
+select *
+  from pr_ot_det
+ where ot_nuot_tipoot_codigo = 'AR'
+   and ot_nuot_serie = '3'
+   and ot_numero = 785207
+   and nvl(estado, '0') != '9';

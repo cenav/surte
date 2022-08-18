@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="DESARROLLO@10.0.0.56" uuid="828167e0-71ce-4f66-bba2-6dd3c6248466">
+    <data-source source="LOCAL" name="DESARROLLO@25.0.3.21" uuid="828167e0-71ce-4f66-bba2-6dd3c6248466">
       <driver-ref>oracle.19</driver-ref>
       <synchronize>true</synchronize>
       <auto-commit>false</auto-commit>
       <jdbc-driver>oracle.jdbc.OracleDriver</jdbc-driver>
-      <jdbc-url>jdbc:oracle:thin:@10.0.0.56:1521:SIG</jdbc-url>
+      <jdbc-url>jdbc:oracle:thin:@25.0.3.21:1521:SIG</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
     <data-source source="LOCAL" name="PRODUCCION@10.0.0.100" uuid="79124d47-8ea8-4d53-b467-cb499ae1df53">

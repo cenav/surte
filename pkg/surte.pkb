@@ -621,7 +621,7 @@ create or replace package body surte as
       loop
         l_articulo := api_articul.onerow(r.art_cod_art);
         l_formula := api_pr_formu.onerow(r.art_cod_art, 1);
-        l_cant_total := round((p_cant_sobra * r.rendimiento) / l_formula.lote, 2);
+        l_cant_total := round((p_cant_sobra * r.rendimiento) / nvl(l_formula.lote, 1), 2);
 
         insert into pr_ot_det
         values ( l_cant_total, r.cant_usada, r.cost_formula, r.cost_usada, r.almacen
@@ -666,7 +666,7 @@ create or replace package body surte as
       loop
         l_old := r;
         l_formula := api_pr_formu.onerow(r.art_cod_art, 1);
-        l_old.cant_formula := round((p_cant_parte * r.rendimiento) / l_formula.lote, 2);
+        l_old.cant_formula := round((p_cant_parte * r.rendimiento) / nvl(l_formula.lote, 1), 2);
         api_pr_ot_det.upd(l_old);
       end loop;
     end;
