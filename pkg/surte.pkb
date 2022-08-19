@@ -713,7 +713,7 @@ create or replace package body surte as
 
   procedure parte_ot_masivo is
   begin
-    for r in (select * from tmp_ordenes_surtir where partir_ot = 1 order by ranking) loop
+    for r in (select * from vw_surte_item where se_puede_partir = 'SI' order by ranking) loop
       parte_ot(r.ot_tipo, r.ot_serie, r.ot_numero, r.cant_partir);
     end loop;
   end;

@@ -682,3 +682,20 @@ select *
    and ot_nuot_serie = '3'
    and ot_numero = 785207
    and nvl(estado, '0') != '9';
+
+select * from tmp_imprime_ot;
+
+select *
+  from vw_surte_item
+ where impreso = 'NO'
+   and (tiene_stock_ot = 'SI' or se_puede_partir = 'SI')
+ order by ranking;
+
+select user, ot_tipo, ot_serie, ot_numero
+  from vw_surte_item
+ where impreso = 'NO'
+   and (tiene_stock_ot = 'SI' or se_puede_partir = 'SI');
+
+select *
+  from seccrus
+ where co_usrusr = user;
