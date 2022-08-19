@@ -1,4 +1,5 @@
 create or replace package body surte as
+  gc_scope_prefix constant varchar2(31) := lower($$plsql_unit) || '.';
   gc_multiplo_partir constant simple_integer := 5;
 
   subtype string_t is varchar2(32672);
@@ -457,8 +458,13 @@ create or replace package body surte as
   , p_numero      pr_ot.numero%type
   , p_cant_partir pr_ot.cant_prog%type
   ) is
-    g_ot  pr_ot%rowtype;
-    g_nro pr_ot.numero%type;
+    g_ot     pr_ot%rowtype;
+    g_nro    pr_ot.numero%type;
+
+    -- <editor-fold desc="logger">
+    l_scope  logger_logs.scope%type := gc_scope_prefix || 'parte_ot';
+    l_params logger.tab_param;
+    -- </editor-fold>
 
     function nuevo_numero(
       p_tipo  pr_num_ot.tipoot_codigo%type
@@ -679,6 +685,13 @@ create or replace package body surte as
       actualiza_detalle(p_cant_parte);
     end;
   begin
+    -- <editor-fold desc="logger">
+    logger.append_param(l_params, 'p_tipo', p_tipo);
+    logger.append_param(l_params, 'p_serie', p_serie);
+    logger.append_param(l_params, 'p_numero', p_numero);
+    logger.append_param(l_params, 'p_cant_partir', p_cant_partir);
+    logger.log('START', l_scope, null, l_params);
+    -- </editor-fold>
     declare
       l_cant_sobra pr_ot.cant_prog%type;
     begin
@@ -687,6 +700,15 @@ create or replace package body surte as
       crea_nueva_ot(l_cant_sobra);
       actualiza_antigua_ot(p_cant_partir);
     end;
+    -- <editor-fold desc="logger">
+    logger.log('END', l_scope);
+    -- </editor-fold>
+  exception
+    when others then
+      -- <editor-fold desc="logger">
+      logger.log_error('Unhandled Exception', l_scope, null, l_params);
+      -- </editor-fold>
+      raise;
   end;
 
   procedure parte_ot_masivo is
