@@ -766,7 +766,22 @@ select *
  where numero = 15315
    and nro = 739;
 
+select *
+  from vw_ordenes_pedido_pendiente
+ where nombre = 'PEVISA';
+
+select *
+  from expednac
+ where numero = 403;
+
+select *
+  from extablas_expo
+ where tipo = '13'
+   and codigo <> '....'
+ order by 2;
+
 select codigo, descripcion
   from extablas_expo
  where tipo = '03'
-   and codigo <> '....';
+   and codigo <> '....'
+ order by descripcion;
