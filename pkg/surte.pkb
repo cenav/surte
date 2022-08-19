@@ -690,7 +690,6 @@ create or replace package body surte as
     logger.append_param(l_params, 'p_serie', p_serie);
     logger.append_param(l_params, 'p_numero', p_numero);
     logger.append_param(l_params, 'p_cant_partir', p_cant_partir);
-    logger.log('START', l_scope, null, l_params);
     -- </editor-fold>
     declare
       l_cant_sobra pr_ot.cant_prog%type;
@@ -700,9 +699,6 @@ create or replace package body surte as
       crea_nueva_ot(l_cant_sobra);
       actualiza_antigua_ot(p_cant_partir);
     end;
-    -- <editor-fold desc="logger">
-    logger.log('END', l_scope);
-    -- </editor-fold>
   exception
     when others then
       -- <editor-fold desc="logger">

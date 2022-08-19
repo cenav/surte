@@ -699,3 +699,74 @@ select user, ot_tipo, ot_serie, ot_numero
 select *
   from seccrus
  where co_usrusr = user;
+
+select ot_numero, count(*)
+  from vw_surte_item
+ where se_puede_partir = 'SI'
+having count(*) > 1
+ group by ot_numero;
+
+select *
+  from pr_ot
+ where nuot_tipoot_codigo = 'AR'
+   and nuot_serie = 3
+   and numero = 850461;
+
+select *
+  from pr_ot
+ where nuot_tipoot_codigo = 'AR'
+   and nuot_serie = 3
+   and origen = 'PARTIDA'
+   and trunc(fecha) = to_date('19/08/2022', 'dd/mm/yyyy');
+
+select *
+  from vw_surte_item
+ where se_puede_partir = 'SI'
+   and cant_partir > 0;
+
+
+select *
+  from pr_ot
+ where nuot_tipoot_codigo = 'AR'
+   and nuot_serie = 3
+   and origen = 'PARTIDA'
+   and trunc(fecha) = to_date('19/08/2022', 'dd/mm/yyyy')
+   and cant_prog > 0
+ order by observacion;
+
+
+begin
+  for r in (
+    -- ordenes partidas por programa
+    select nuot_tipoot_codigo, nuot_serie, numero, abre01, per_env, fecha
+      from pr_ot
+     where nuot_tipoot_codigo = 'AR'
+       and nuot_serie = 3
+       and origen = 'PARTIDA'
+       and estado = '1'
+       and trunc(fecha) = to_date('19/08/2022', 'dd/mm/yyyy')
+       and cant_prog <= 0
+    )
+  loop
+    delete
+      from expedido_d
+     where numero = r.abre01
+       and nro = r.per_env;
+
+    update pr_ot
+       set estado = '9'
+     where nuot_tipoot_codigo = r.nuot_tipoot_codigo
+       and nuot_serie = r.nuot_serie
+       and numero = r.numero;
+  end loop;
+end;
+
+select *
+  from expedido_d
+ where numero = 15315
+   and nro = 739;
+
+select codigo, descripcion
+  from extablas_expo
+ where tipo = '03'
+   and codigo <> '....';
