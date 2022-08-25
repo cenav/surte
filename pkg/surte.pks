@@ -8,6 +8,7 @@ create or replace package surte as
     p_pais     varchar2 default null
   , p_vendedor varchar2 default null
   , p_dias     pls_integer default null
+  , p_empaque  varchar2 default null
   );
 
   procedure parte_ot(

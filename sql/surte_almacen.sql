@@ -785,3 +785,30 @@ select codigo, descripcion
  where tipo = '03'
    and codigo <> '....'
  order by descripcion;
+
+  with detalle as (
+    select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
+         , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
+         , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
+         , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
+         , v.fch_impresion, v.es_juego, v.es_importado
+         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
+         , dense_rank() over (
+      order by case when p.prioritario = 1 then v.es_prioritario end desc
+--         , case when trunc(sysdate) - v.fch_pedido > :p_dias then 1 else 0 end desc
+        , case when v.valor > p.valor_item then 1 else 0 end desc
+        , v.es_juego
+        , v.valor desc
+      ) as ranking
+      from vw_ordenes_pedido_pendiente v
+           join param_surte p on p.id_param = 1
+     where (v.pais = :p_pais or :p_pais is null)
+       and (v.vendedor = :p_vendedor or :p_vendedor is null)
+       and (v.empaque = :p_empaque or :p_empaque is null)
+       and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
+       and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
+            not exists(select * from tmp_selecciona_cliente))
+    )
+select *
+  from detalle
+ order by ranking;

@@ -64,7 +64,7 @@ create or replace package body surte as
   bulk_errors exception;
   pragma exception_init (bulk_errors, -24381);
 
-  cursor pedidos_cur(p_pais varchar2, p_vendedor varchar2, p_dias pls_integer) is
+  cursor pedidos_cur(p_pais varchar2, p_vendedor varchar2, p_dias pls_integer, p_empaque varchar2) is
     -- pedidos de clientes ordenados primero por juegos, luego de mayor a menor valor
       with detalle as (
         select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
@@ -75,7 +75,7 @@ create or replace package body surte as
              , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
              , dense_rank() over (
           order by case when p.prioritario = 1 then v.es_prioritario end desc
-            , case when trunc(sysdate) - v.fch_pedido > p_dias then 1 else 0 end desc
+--             , case when trunc(sysdate) - v.fch_pedido > p_dias then 1 else 0 end desc --> 25/08/22 solo filtre mayores a fecha
             , case when v.valor > p.valor_item then 1 else 0 end desc
             , v.es_juego
             , v.valor desc
@@ -84,6 +84,8 @@ create or replace package body surte as
                join param_surte p on p.id_param = 1
          where (v.pais = p_pais or p_pais is null)
            and (v.vendedor = p_vendedor or p_vendedor is null)
+           and (v.empaque = p_empaque or p_empaque is null)
+           and (trunc(sysdate) - v.fch_pedido > p_dias or p_dias is null)
            and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
                 not exists(select * from tmp_selecciona_cliente))
 --          where numero in (801975)
@@ -145,6 +147,7 @@ create or replace package body surte as
     p_pais     varchar2 default null
   , p_vendedor varchar2 default null
   , p_dias     pls_integer default null
+  , p_empaque  varchar2 default null
   ) is
     g_stocks  stock_aat;
     g_pedidos pedidos_aat;
@@ -367,7 +370,7 @@ create or replace package body surte as
 
     procedure carga_colecciones is
     begin
-      for r in pedidos_cur(p_pais, p_vendedor, p_dias) loop
+      for r in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque) loop
         -- para el primer quiebre de grupo (item pedido)
         -- normaliza la data
         if r.oa is not null then
