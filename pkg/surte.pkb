@@ -53,6 +53,7 @@ create or replace package body surte as
     partir_ot       tmp_ordenes_surtir.partir_ot%type,
     cant_partir     tmp_ordenes_surtir.cant_partir%type,
     tiene_stock_ot  tmp_ordenes_surtir.tiene_stock_ot%type,
+    es_prioritario  tmp_ordenes_surtir.es_prioritario%type,
     detalle         detalle_aat
   );
 
@@ -71,7 +72,7 @@ create or replace package body surte as
              , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
              , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
              , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
-             , v.fch_impresion, v.es_juego, v.es_importado
+             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario
              , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
              , dense_rank() over (
           order by case when p.prioritario = 1 then v.es_prioritario end desc
@@ -82,12 +83,13 @@ create or replace package body surte as
           ) as ranking
           from vw_ordenes_pedido_pendiente v
                join param_surte p on p.id_param = 1
-         where (v.pais = p_pais or p_pais is null)
+         where v.es_prioritario = 1
+            or ((v.pais = p_pais or p_pais is null)
            and (v.vendedor = p_vendedor or p_vendedor is null)
            and (v.empaque = p_empaque or p_empaque is null)
            and (trunc(sysdate) - v.fch_pedido > p_dias or p_dias is null)
            and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-                not exists(select * from tmp_selecciona_cliente))
+                not exists(select * from tmp_selecciona_cliente)))
 --          where numero in (801975)
         )
     select *
@@ -160,28 +162,12 @@ create or replace package body surte as
       g_param := api_param_surte.onerow();
     end;
 
-    function saldo_stock(
-      p_codart articul.cod_art%type
-    , p_cant   number
-    ) return number is
-    begin
-      g_stocks(p_codart) := g_stocks(p_codart) - p_cant;
-      return g_stocks(p_codart);
-    end;
-
     procedure agrega_stock(
       p_codart articul.cod_art%type
     , p_cant   number
     ) is
     begin
       g_stocks(p_codart) := g_stocks(p_codart) + p_cant;
-    end;
-
-    function faltante(
-      p_stock_actual number
-    ) return number is
-    begin
-      return case when p_stock_actual < 0 then abs(p_stock_actual) else 0 end;
     end;
 
     procedure crea_maestro(
@@ -206,6 +192,7 @@ create or replace package body surte as
       g_pedidos(r.ranking).impreso := r.impreso;
       g_pedidos(r.ranking).fch_impresion := r.fch_impresion;
       g_pedidos(r.ranking).tiene_stock_ot := null;
+      g_pedidos(r.ranking).es_prioritario := r.es_prioritario;
     end;
 
     procedure crea_detalle(
@@ -410,6 +397,7 @@ create or replace package body surte as
           g_tmp(g_tmp.count).fch_impresion := g_pedidos(i).fch_impresion;
           g_tmp(g_tmp.count).partir_ot := g_pedidos(i).partir_ot;
           g_tmp(g_tmp.count).cant_partir := g_pedidos(i).cant_partir;
+          g_tmp(g_tmp.count).es_prioritario := g_pedidos(i).es_prioritario;
 
           -- detalle
           g_tmp(g_tmp.count).cod_art := g_pedidos(i).detalle(j).cod_art;
@@ -710,9 +698,18 @@ create or replace package body surte as
       raise;
   end;
 
-  procedure parte_ot_masivo is
+  procedure parte_ot_masivo(
+    p_prioritario pls_integer default 1
+  ) is
   begin
-    for r in (select * from vw_surte_item where se_puede_partir = 'SI' order by ranking) loop
+    for r in (
+      select *
+        from vw_surte_item
+       where se_puede_partir = 'SI'
+         and (p_prioritario = 1 or (p_prioritario = 0 and es_prioritario = 'NO'))
+       order by ranking
+      )
+    loop
       parte_ot(r.ot_tipo, r.ot_serie, r.ot_numero, r.cant_partir);
     end loop;
   end;

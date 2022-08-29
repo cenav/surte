@@ -18,5 +18,7 @@ create or replace package surte as
   , p_cant_partir pr_ot.cant_prog%type
   );
 
-  procedure parte_ot_masivo;
+  procedure parte_ot_masivo(
+    p_prioritario pls_integer default 1
+  );
 end surte;
