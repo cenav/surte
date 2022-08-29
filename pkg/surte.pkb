@@ -83,14 +83,15 @@ create or replace package body surte as
           ) as ranking
           from vw_ordenes_pedido_pendiente v
                join param_surte p on p.id_param = 1
-         where v.es_prioritario = 1
-            or ((v.pais = p_pais or p_pais is null)
-           and (v.vendedor = p_vendedor or p_vendedor is null)
-           and (v.empaque = p_empaque or p_empaque is null)
-           and (trunc(sysdate) - v.fch_pedido > p_dias or p_dias is null)
-           and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-                not exists(select * from tmp_selecciona_cliente)))
---          where numero in (801975)
+         where (v.es_prioritario = 1
+           or ((v.pais = p_pais or p_pais is null)
+             and (v.vendedor = p_vendedor or p_vendedor is null)
+             and (v.empaque = p_empaque or p_empaque is null)
+             and (trunc(sysdate) - v.fch_pedido > p_dias or p_dias is null)
+             and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
+                  not exists(select * from tmp_selecciona_cliente)))
+           )
+           and v.impreso = 'NO'
         )
     select *
       from detalle

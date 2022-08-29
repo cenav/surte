@@ -788,6 +788,7 @@ select codigo, descripcion
 
 select * from param_surte;
 
+
   with detalle as (
     select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
          , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
@@ -804,14 +805,15 @@ select * from param_surte;
       ) as ranking
       from vw_ordenes_pedido_pendiente v
            join param_surte p on p.id_param = 1
-     where v.es_prioritario = 1
-        or ((v.pais = :p_pais or :p_pais is null)
-       and (v.vendedor = :p_vendedor or :p_vendedor is null)
-       and (v.empaque = :p_empaque or :p_empaque is null)
-       and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
-       and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-            not exists(select * from tmp_selecciona_cliente))
+     where (v.es_prioritario = 1
+       or ((v.pais = :p_pais or :p_pais is null)
+         and (v.vendedor = :p_vendedor or :p_vendedor is null)
+         and (v.empaque = :p_empaque or :p_empaque is null)
+         and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
+         and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
+              not exists(select * from tmp_selecciona_cliente)))
        )
+       and v.impreso = 'NO'
     )
 select *
   from detalle
@@ -824,3 +826,43 @@ select *
  where se_puede_partir = 'SI'
    and (:p_prioritario = 1 or (:p_prioritario = 0 and es_prioritario = 'NO'))
  order by ranking;
+
+select user, ot_tipo, ot_serie, ot_numero
+  from vw_surte_item
+ where impreso = 'NO'
+   and (tiene_stock_ot = 'SI' or se_puede_partir = 'SI')
+   and (:prioritario = 1 or (:prioritario = 0 and es_prioritario = 'NO'));
+
+select t.ranking, t.nom_cliente, t.nro_pedido, to_char(t.fch_pedido, 'dd/mm/yyyy') as fch_pedido, t.ot_tipo
+     , t.ot_serie, t.ot_numero, t.formu_art, t.ot_estado, t.valor, t.tiene_stock_ot, t.cod_art, t.cantidad
+     , nvl(cant_final, 0) as cant_final, t.tiene_stock_itm
+     , t.saldo_stock, t.linea, t.tiene_stock_itm, a.numero_op, t.es_importado, t.impreso, se_puede_partir
+     , get_descripcion_grupo_pieza(t.cod_art) as grupo, stock_inicial, t.sobrante
+  --, decode(se_puede_partir,'SI', t.cantidad - t.cant_final, cantidad) as faltante
+     , t.cantidad - nvl(t.cant_final, 0) as faltante
+  from vw_surte_pieza t
+     , vw_articulo a
+ where t.cod_art = a.cod_art
+   and (tiene_stock_ot = 'NO' or se_puede_partir = 'SI')
+   and t.tiene_stock_itm = 'NO'
+   and t.es_importado = 'NO'
+ order by ranking;
+
+
+--  resumen de produccion
+  with detalle as (
+    select t.ranking, t.nom_cliente, t.nro_pedido, to_char(t.fch_pedido, 'dd/mm/yyyy') as fch_pedido
+         , t.ot_tipo, t.ot_serie, t.ot_numero, t.formu_art, t.ot_estado, t.valor, t.tiene_stock_ot, t.cod_art
+         , t.cantidad, nvl(cant_final, 0) as cant_final, t.tiene_stock_itm
+         , t.saldo_stock, t.linea, t.tiene_stock_itm, t.es_importado, t.impreso, se_puede_partir
+         , get_descripcion_grupo_pieza(t.cod_art) as grupo, stock_inicial, t.sobrante
+         , t.cantidad - nvl(t.cant_final, 0) as faltante
+      from vw_surte_pieza t
+     where (tiene_stock_ot = 'NO' or se_puede_partir = 'SI')
+       and t.tiene_stock_itm = 'NO'
+       and t.es_importado = 'NO'
+     order by ranking
+    )
+select *
+  from detalle d
+       join vw_articulo a on d.cod_art = a.cod_art;
