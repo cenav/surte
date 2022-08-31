@@ -866,3 +866,18 @@ select t.ranking, t.nom_cliente, t.nro_pedido, to_char(t.fch_pedido, 'dd/mm/yyyy
 select *
   from detalle d
        join vw_articulo a on d.cod_art = a.cod_art;
+
+select *
+  from pr_ot_impresion
+ where nuot_tipoot_codigo = 'AR'
+   and numero = 819650;
+
+select cod_cliente, nombre, fch_pedido, pedido, pedido_item, numero, estado, pais, vendedor, empaque
+     , formu_art_cod_art, valor, dias_impreso, fch_impresion, es_juego, es_prioritario
+  from vw_ordenes_impresas_pendientes
+ group by cod_cliente, nombre, fch_pedido, pedido, pedido_item, numero, estado, pais, vendedor, empaque
+        , formu_art_cod_art, valor, dias_impreso, fch_impresion, es_juego, es_prioritario
+ order by dias_impreso desc, valor desc;
+
+select * from vw_ordenes_impresas_pendientes;
+
