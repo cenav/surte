@@ -24,6 +24,7 @@ create or replace view vw_ordenes_impresas_piezas as
                   and h.nuot_tipoot_codigo = i.nuot_tipoot_codigo
      where h.nuot_tipoot_codigo = 'AR'
        and h.estado = 1
+       and d.cod_lin not between '800' and '899'
     )
      , pedidos as (
     -- exportacion

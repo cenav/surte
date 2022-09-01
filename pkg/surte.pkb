@@ -101,7 +101,24 @@ create or replace package body surte as
   function carga_stock return stock_aat is
     l_stocks stock_aat;
   begin
-    for r in (select distinct art_cod_art, stock from vw_ordenes_pedido_pendiente) loop
+    for r in (
+      -- resta ordenes que estan impresas al stock actual de las piezas
+        with impresas as (
+          select o.art_cod_art, sum(o.cant_formula) as impreso
+            from vw_ordenes_impresas_piezas o
+                 join param_surte p on p.id_param = 1
+           where o.dias_impreso <= p.dias_impreso_bien
+           group by o.art_cod_art
+          )
+           , stock as (
+          select distinct art_cod_art, stock
+            from vw_ordenes_pedido_pendiente
+          )
+      select s.art_cod_art, greatest(s.stock - nvl(i.impreso, 0), 0) as stock
+        from stock s
+             left join impresas i on s.art_cod_art = i.art_cod_art
+      )
+    loop
       l_stocks(r.art_cod_art) := r.stock;
     end loop;
 
