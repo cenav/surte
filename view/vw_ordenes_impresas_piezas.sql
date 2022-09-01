@@ -7,7 +7,7 @@ create or replace view vw_ordenes_impresas_piezas as
     )
      , ordenes as (
     select h.abre01 as pedido, h.per_env as pedido_item, h.nuot_tipoot_codigo, h.nuot_serie, h.numero, h.fecha
-         , h.estado, h.destino, h.formu_art_cod_art
+         , h.estado, h.destino, h.formu_art_cod_art, h.cant_prog
          , case g.grupo when 1 then 1 else 0 end as es_juego, i.fch_impresion
          , round(sysdate - i.fch_impresion) as dias_impreso
          , d.art_cod_art, d.cant_formula
@@ -29,8 +29,8 @@ create or replace view vw_ordenes_impresas_piezas as
      , pedidos as (
     -- exportacion
     select p.numero as pedido, d.nro as pedido_item, p.cod_cliente, p.nombre, p.fecha as fch_pedido
-         , o.numero, o.nuot_serie, o.nuot_tipoot_codigo, o.fecha, o.estado, o.destino, o.dias_impreso
-         , o.formu_art_cod_art, o.es_juego, o.fch_impresion, d.preuni, a.codigo_aux as pais
+         , o.numero, o.nuot_serie, o.nuot_tipoot_codigo, o.fecha, o.estado, o.destino, o.cant_prog
+         , o.dias_impreso, o.formu_art_cod_art, o.es_juego, o.fch_impresion, d.preuni, a.codigo_aux as pais
          , p.zona as vendedor, p.empaque
          , round(d.canti * d.preuni, 2) as valor
          , o.art_cod_art, o.cant_formula
@@ -42,8 +42,8 @@ create or replace view vw_ordenes_impresas_piezas as
      union all
 -- nacional
     select p.numero as pedido, d.nro as pedido_item, p.cod_cliente, p.nombre, p.fecha as fch_pedido
-         , o.numero, o.nuot_serie, o.nuot_tipoot_codigo, o.fecha, o.estado, o.destino, o.dias_impreso
-         , o.formu_art_cod_art, o.es_juego, o.fch_impresion, d.preuni, p.pais
+         , o.numero, o.nuot_serie, o.nuot_tipoot_codigo, o.fecha, o.estado, o.destino, o.cant_prog
+         , o.dias_impreso, o.formu_art_cod_art, o.es_juego, o.fch_impresion, d.preuni, p.pais
          , 'PE' as vendedor, p.empaque
          , round(d.canti * d.preuni, 2) as valor
          , o.art_cod_art, o.cant_formula
@@ -55,7 +55,7 @@ create or replace view vw_ordenes_impresas_piezas as
 select nvl(gcc.cod_grupo, p.cod_cliente) as cod_cliente
      , nvl(gc.dsc_grupo, p.nombre) as nombre
      , p.fch_pedido, p.pedido, p.pedido_item, p.nuot_tipoot_codigo, p.nuot_serie, p.numero, p.fecha
-     , p.estado, p.pais, p.vendedor, p.empaque, p.formu_art_cod_art, p.valor, p.dias_impreso
+     , p.cant_prog, p.estado, p.pais, p.vendedor, p.empaque, p.formu_art_cod_art, p.valor, p.dias_impreso
      , p.fch_impresion, p.es_juego, nvl(gc.es_prioritario, 0) as es_prioritario
      , p.art_cod_art, p.cant_formula
   from pedidos p
