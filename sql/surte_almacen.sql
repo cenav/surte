@@ -873,22 +873,10 @@ select *
  where nuot_tipoot_codigo = 'AR'
    and numero = 819650;
 
-  with impresas as (
-    select o.art_cod_art, sum(o.cant_formula) as impreso
-      from vw_ordenes_impresas_piezas o
-           join param_surte p on p.id_param = 1
-     where o.dias_impreso <= p.dias_impreso_bien
-     group by o.art_cod_art
-    )
-     , stock as (
-    select distinct art_cod_art, stock
-      from vw_ordenes_pedido_pendiente
-    )
-select s.art_cod_art, s.stock, i.impreso, greatest(s.stock - nvl(i.impreso, 0), 0) as stock
-  from stock s
-       left join impresas i on s.art_cod_art = i.art_cod_art;
-
 select cod_cliente, nombre, fch_pedido, pedido, pedido_item, numero, estado, pais, vendedor, empaque
      , formu_art_cod_art, valor, dias_impreso, fch_impresion, es_juego, es_prioritario, cant_prog, color
   from vw_ordenes_impresas_pendientes
- order by dias_impreso desc, valor desc
+ order by dias_impreso desc, valor desc;
+
+
+select descripcion, color from vw_rango_dias_impreso order by id;
