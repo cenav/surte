@@ -21,4 +21,10 @@ create or replace package surte as
   procedure parte_ot_masivo(
     p_prioritario pls_integer default 1
   );
+
+  function total_imprimir return number;
+
+  function total_impreso return number;
+
+  function total_surtir return number;
 end surte;

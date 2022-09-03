@@ -731,4 +731,31 @@ create or replace package body surte as
       parte_ot(r.ot_tipo, r.ot_serie, r.ot_numero, r.cant_partir);
     end loop;
   end;
+
+  function total_imprimir return number is
+    l_total number := 0;
+  begin
+    select sum(valor_surtir)
+      into l_total
+      from vw_surte_item
+     where tiene_stock_ot = 'SI' or se_puede_partir = 'SI';
+
+    return l_total;
+  end;
+
+  function total_impreso return number is
+    l_total number := 0;
+  begin
+    select sum(valor)
+      into l_total
+      from vw_ordenes_impresas_pendientes
+     where color = 'GREEN';
+
+    return l_total;
+  end;
+
+  function total_surtir return number is
+  begin
+    return total_imprimir() + total_impreso();
+  end;
 end surte;
