@@ -735,7 +735,7 @@ create or replace package body surte as
   function total_imprimir return number is
     l_total number := 0;
   begin
-    select sum(valor_surtir)
+    select nvl(sum(valor_surtir), 0)
       into l_total
       from vw_surte_item
      where tiene_stock_ot = 'SI' or se_puede_partir = 'SI';
@@ -746,7 +746,7 @@ create or replace package body surte as
   function total_impreso return number is
     l_total number := 0;
   begin
-    select sum(valor)
+    select nvl(sum(valor), 0)
       into l_total
       from vw_ordenes_impresas_pendientes
      where color = 'GREEN';

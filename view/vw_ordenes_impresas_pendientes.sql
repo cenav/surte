@@ -5,10 +5,8 @@ create or replace view vw_ordenes_impresas_pendientes as
          , es_juego, es_prioritario
       from vw_ordenes_impresas_piezas
      group by cod_cliente, nombre, fch_pedido, pedido, pedido_item, nuot_tipoot_codigo, nuot_serie, numero
-            , fecha
-            , cant_prog, estado, pais, vendedor, empaque, formu_art_cod_art, valor, dias_impreso
-            , fch_impresion
-            , es_juego, es_prioritario
+            , fecha, cant_prog, estado, pais, vendedor, empaque, formu_art_cod_art, valor, dias_impreso
+            , fch_impresion, es_juego, es_prioritario
      order by dias_impreso desc, valor desc
     )
 select d.cod_cliente, d.nombre, d.fch_pedido, d.pedido, d.pedido_item, d.nuot_tipoot_codigo, d.nuot_serie
