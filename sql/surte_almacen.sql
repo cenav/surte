@@ -878,5 +878,13 @@ select cod_cliente, nombre, fch_pedido, pedido, pedido_item, numero, estado, pai
   from vw_ordenes_impresas_pendientes
  order by dias_impreso desc, valor desc;
 
-
 select descripcion, color from vw_rango_dias_impreso order by id;
+
+select * from pr_prioridad_htmp_30;
+
+select * from pr_prioridad_tmp_30;
+
+select * from pr_prioridad_pza_30;
+
+select * from pr_prioridad_sao_30;
+
