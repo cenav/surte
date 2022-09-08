@@ -1,6 +1,11 @@
+alter table pevisa.tmp_surte_pza
+  drop primary key cascade;
+
+drop table pevisa.tmp_surte_pza cascade constraints;
+
 create global temporary table pevisa.tmp_surte_pza (
   nro_pedido      number(8),
-  itm_pedido      number(3),
+  itm_pedido      number(4),
   cod_pza         varchar2(30),
   cantidad        number(12, 4),
   rendimiento     number(12, 4),

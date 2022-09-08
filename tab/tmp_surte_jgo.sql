@@ -1,6 +1,11 @@
+alter table pevisa.tmp_surte_jgo
+  drop primary key cascade;
+
+drop table pevisa.tmp_surte_jgo cascade constraints;
+
 create global temporary table pevisa.tmp_surte_jgo (
   nro_pedido      number(8),
-  itm_pedido      number(3),
+  itm_pedido      number(4),
   cod_cliente     varchar2(30),
   nom_cliente     varchar2(100),
   fch_pedido      date,

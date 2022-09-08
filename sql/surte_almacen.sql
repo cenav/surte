@@ -888,3 +888,4 @@ select * from pr_prioridad_pza_30;
 
 select * from pr_prioridad_sao_30;
 
+select * from tmp_surte_jgo;
