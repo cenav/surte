@@ -889,3 +889,13 @@ select * from pr_prioridad_pza_30;
 select * from pr_prioridad_sao_30;
 
 select * from tmp_surte_jgo;
+
+select *
+  from tmp_surte_pza
+ where nro_pedido = 14743
+   and itm_pedido = 45;
+
+select *
+  from vw_surte_pza
+ where nro_pedido = 14743
+   and itm_pedido = 45;

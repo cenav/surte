@@ -14,52 +14,54 @@ create or replace package body surte as
     cant_final   number
   );
 
-  type detalle_rt is record (
-    cod_art         tmp_ordenes_surtir.cod_art%type,
-    cantidad        tmp_ordenes_surtir.cantidad%type,
-    rendimiento     tmp_ordenes_surtir.rendimiento%type,
-    stock_inicial   tmp_ordenes_surtir.stock_inicial%type,
-    stock_actual    tmp_ordenes_surtir.stock_actual%type,
-    saldo_stock     tmp_ordenes_surtir.saldo_stock%type,
-    sobrante        tmp_ordenes_surtir.sobrante%type,
-    faltante        tmp_ordenes_surtir.faltante%type,
-    cant_final      tmp_ordenes_surtir.cant_final%type,
-    linea           tmp_ordenes_surtir.linea%type,
-    es_importado    tmp_ordenes_surtir.es_importado%type,
-    tiene_stock_itm tmp_ordenes_surtir.tiene_stock_itm%type
+  type pieza_rt is record (
+    cod_art         tmp_surte_pza.cod_pza%type,
+    cantidad        tmp_surte_pza.cantidad%type,
+    rendimiento     tmp_surte_pza.rendimiento%type,
+    stock_inicial   tmp_surte_pza.stock_inicial%type,
+    stock_actual    tmp_surte_pza.stock_actual%type,
+    saldo_stock     tmp_surte_pza.saldo_stock%type,
+    sobrante        tmp_surte_pza.sobrante%type,
+    faltante        tmp_surte_pza.faltante%type,
+    cant_final      tmp_surte_pza.cant_final%type,
+    linea           tmp_surte_pza.linea%type,
+    es_importado    tmp_surte_pza.es_importado%type,
+    tiene_stock_itm tmp_surte_pza.tiene_stock_itm%type
   );
 
-  type detalle_aat is table of detalle_rt index by pls_integer;
+  type pieza_aat is table of pieza_rt index by pls_integer;
 
-  type maestro_rt is record (
-    ranking         tmp_ordenes_surtir.ranking%type,
-    cod_cliente     tmp_ordenes_surtir.cod_cliente%type,
-    nom_cliente     tmp_ordenes_surtir.nom_cliente%type,
-    nro_pedido      tmp_ordenes_surtir.nro_pedido%type,
-    itm_pedido      tmp_ordenes_surtir.itm_pedido%type,
-    fch_pedido      tmp_ordenes_surtir.fch_pedido%type,
-    ot_tipo         tmp_ordenes_surtir.ot_tipo%type,
-    ot_serie        tmp_ordenes_surtir.ot_serie%type,
-    ot_numero       tmp_ordenes_surtir.ot_numero%type,
-    ot_estado       tmp_ordenes_surtir.ot_estado%type,
-    formu_art       tmp_ordenes_surtir.formu_art%type,
-    es_juego        tmp_ordenes_surtir.es_juego%type,
-    tiene_importado tmp_ordenes_surtir.tiene_importado%type,
-    preuni          tmp_ordenes_surtir.preuni%type,
-    valor           tmp_ordenes_surtir.valor%type,
-    valor_surtir    tmp_ordenes_surtir.valor_surtir%type,
-    impreso         tmp_ordenes_surtir.impreso%type,
-    fch_impresion   tmp_ordenes_surtir.fch_impresion%type,
-    partir_ot       tmp_ordenes_surtir.partir_ot%type,
-    cant_partir     tmp_ordenes_surtir.cant_partir%type,
-    tiene_stock_ot  tmp_ordenes_surtir.tiene_stock_ot%type,
-    es_prioritario  tmp_ordenes_surtir.es_prioritario%type,
-    detalle         detalle_aat
+  type juego_rt is record (
+    ranking         tmp_surte_jgo.ranking%type,
+    cod_cliente     tmp_surte_jgo.cod_cliente%type,
+    nom_cliente     tmp_surte_jgo.nom_cliente%type,
+    nro_pedido      tmp_surte_jgo.nro_pedido%type,
+    itm_pedido      tmp_surte_jgo.itm_pedido%type,
+    fch_pedido      tmp_surte_jgo.fch_pedido%type,
+    ot_tipo         tmp_surte_jgo.ot_tipo%type,
+    ot_serie        tmp_surte_jgo.ot_serie%type,
+    ot_numero       tmp_surte_jgo.ot_numero%type,
+    ot_estado       tmp_surte_jgo.ot_estado%type,
+    formu_art       tmp_surte_jgo.cod_jgo%type,
+    es_juego        tmp_surte_jgo.es_juego%type,
+    tiene_importado tmp_surte_jgo.tiene_importado%type,
+    preuni          tmp_surte_jgo.preuni%type,
+    valor           tmp_surte_jgo.valor%type,
+    valor_surtir    tmp_surte_jgo.valor_surtir%type,
+    impreso         tmp_surte_jgo.impreso%type,
+    fch_impresion   tmp_surte_jgo.fch_impresion%type,
+    partir_ot       tmp_surte_jgo.partir_ot%type,
+    cant_partir     tmp_surte_jgo.cant_partir%type,
+    tiene_stock_ot  tmp_surte_jgo.tiene_stock_ot%type,
+    es_prioritario  tmp_surte_jgo.es_prioritario%type,
+    piezas          pieza_aat
   );
 
   type stock_aat is table of stock_t index by codart_t;
-  type pedidos_aat is table of maestro_rt index by ranking_t;
+  type juegos_aat is table of juego_rt index by ranking_t;
   type tmp_aat is table of tmp_ordenes_surtir%rowtype index by pls_integer;
+  type tmp_jgo_aat is table of tmp_surte_jgo%rowtype index by pls_integer;
+  type tmp_pza_aat is table of tmp_surte_pza%rowtype index by pls_integer;
   type calculo_aat is table of calculo_rt index by pls_integer;
 
   bulk_errors exception;
@@ -169,10 +171,8 @@ create or replace package body surte as
   , p_dias     pls_integer default null
   , p_empaque  varchar2 default null
   ) is
-    g_stocks  stock_aat;
-    g_pedidos pedidos_aat;
-    g_tmp     tmp_aat;
-    g_param   param_surte%rowtype;
+    g_stocks stock_aat;
+    g_param  param_surte%rowtype;
 
     procedure init is
     begin
@@ -180,85 +180,67 @@ create or replace package body surte as
       g_param := api_param_surte.onerow();
     end;
 
-    procedure agrega_stock(
-      p_codart articul.cod_art%type
-    , p_cant   number
-    ) is
-    begin
-      g_stocks(p_codart) := g_stocks(p_codart) + p_cant;
-    end;
-
     procedure crea_maestro(
-      r pedidos_cur%rowtype
+      p_pedido in     pedidos_cur%rowtype
+    , p_juegos in out juegos_aat
     ) is
     begin
-      g_pedidos(r.ranking).ranking := r.ranking;
-      g_pedidos(r.ranking).cod_cliente := r.cod_cliente;
-      g_pedidos(r.ranking).nom_cliente := r.nombre;
-      g_pedidos(r.ranking).nro_pedido := r.pedido;
-      g_pedidos(r.ranking).itm_pedido := r.pedido_item;
-      g_pedidos(r.ranking).fch_pedido := r.fch_pedido;
-      g_pedidos(r.ranking).preuni := r.preuni;
-      g_pedidos(r.ranking).valor := r.valor;
-      g_pedidos(r.ranking).ot_tipo := r.nuot_tipoot_codigo;
-      g_pedidos(r.ranking).ot_serie := r.nuot_serie;
-      g_pedidos(r.ranking).ot_numero := r.numero;
-      g_pedidos(r.ranking).ot_estado := r.estado;
-      g_pedidos(r.ranking).formu_art := r.formu_art_cod_art;
-      g_pedidos(r.ranking).es_juego := r.es_juego;
-      g_pedidos(r.ranking).tiene_importado := r.tiene_importado;
-      g_pedidos(r.ranking).impreso := r.impreso;
-      g_pedidos(r.ranking).fch_impresion := r.fch_impresion;
-      g_pedidos(r.ranking).tiene_stock_ot := null;
-      g_pedidos(r.ranking).es_prioritario := r.es_prioritario;
+      p_juegos(p_pedido.ranking).ranking := p_pedido.ranking;
+      p_juegos(p_pedido.ranking).cod_cliente := p_pedido.cod_cliente;
+      p_juegos(p_pedido.ranking).nom_cliente := p_pedido.nombre;
+      p_juegos(p_pedido.ranking).nro_pedido := p_pedido.pedido;
+      p_juegos(p_pedido.ranking).itm_pedido := p_pedido.pedido_item;
+      p_juegos(p_pedido.ranking).fch_pedido := p_pedido.fch_pedido;
+      p_juegos(p_pedido.ranking).preuni := p_pedido.preuni;
+      p_juegos(p_pedido.ranking).valor := p_pedido.valor;
+      p_juegos(p_pedido.ranking).ot_tipo := p_pedido.nuot_tipoot_codigo;
+      p_juegos(p_pedido.ranking).ot_serie := p_pedido.nuot_serie;
+      p_juegos(p_pedido.ranking).ot_numero := p_pedido.numero;
+      p_juegos(p_pedido.ranking).ot_estado := p_pedido.estado;
+      p_juegos(p_pedido.ranking).formu_art := p_pedido.formu_art_cod_art;
+      p_juegos(p_pedido.ranking).es_juego := p_pedido.es_juego;
+      p_juegos(p_pedido.ranking).tiene_importado := p_pedido.tiene_importado;
+      p_juegos(p_pedido.ranking).impreso := p_pedido.impreso;
+      p_juegos(p_pedido.ranking).fch_impresion := p_pedido.fch_impresion;
+      p_juegos(p_pedido.ranking).tiene_stock_ot := null;
+      p_juegos(p_pedido.ranking).es_prioritario := p_pedido.es_prioritario;
     end;
 
     procedure crea_detalle(
-      r pedidos_cur%rowtype
+      p_pedido in     pedidos_cur%rowtype
+    , p_juegos in out juegos_aat
     ) is
       l_idx pls_integer := 0;
     begin
-      l_idx := g_pedidos(r.ranking).detalle.count + 1;
-      g_pedidos(r.ranking).detalle(l_idx).cod_art := r.art_cod_art;
-      g_pedidos(r.ranking).detalle(l_idx).cantidad := r.cant_formula;
-      g_pedidos(r.ranking).detalle(l_idx).stock_inicial := r.stock;
-      g_pedidos(r.ranking).detalle(l_idx).saldo_stock := null;
-      g_pedidos(r.ranking).detalle(l_idx).faltante := null;
-      g_pedidos(r.ranking).detalle(l_idx).linea := r.cod_lin;
-      g_pedidos(r.ranking).detalle(l_idx).es_importado := r.es_importado;
-      g_pedidos(r.ranking).detalle(l_idx).rendimiento := r.rendimiento;
-      g_pedidos(r.ranking).detalle(l_idx).tiene_stock_itm := null;
-    end;
-
-    procedure regresa_stock(
-      p_idx pls_integer
-    ) is
-    begin
-      g_pedidos(p_idx).tiene_stock_ot := 'NO';
-      for j in 1 .. g_pedidos(p_idx).detalle.count loop
-        agrega_stock(g_pedidos(p_idx).detalle(j).cod_art, g_pedidos(p_idx).detalle(j).cantidad);
-        g_pedidos(p_idx).detalle(j).saldo_stock := null;
-        g_pedidos(p_idx).detalle(j).sobrante := null;
-        g_pedidos(p_idx).detalle(j).faltante := null;
-      end loop;
+      l_idx := p_juegos(p_pedido.ranking).piezas.count + 1;
+      p_juegos(p_pedido.ranking).piezas(l_idx).cod_art := p_pedido.art_cod_art;
+      p_juegos(p_pedido.ranking).piezas(l_idx).cantidad := p_pedido.cant_formula;
+      p_juegos(p_pedido.ranking).piezas(l_idx).stock_inicial := p_pedido.stock;
+      p_juegos(p_pedido.ranking).piezas(l_idx).saldo_stock := null;
+      p_juegos(p_pedido.ranking).piezas(l_idx).faltante := null;
+      p_juegos(p_pedido.ranking).piezas(l_idx).linea := p_pedido.cod_lin;
+      p_juegos(p_pedido.ranking).piezas(l_idx).es_importado := p_pedido.es_importado;
+      p_juegos(p_pedido.ranking).piezas(l_idx).rendimiento := p_pedido.rendimiento;
+      p_juegos(p_pedido.ranking).piezas(l_idx).tiene_stock_itm := null;
     end;
 
     procedure actualiza_saldo(
-      p_idx     pls_integer
-    , p_calculo calculo_aat
+      p_idx                  pls_integer
+    , p_calculo              calculo_aat
+    , p_juegos in out nocopy juegos_aat
     ) is
       l_codart codart_t;
     begin
-      g_pedidos(p_idx).tiene_stock_ot := 'SI';
-      g_pedidos(p_idx).valor_surtir := g_pedidos(p_idx).valor;
-      g_pedidos(p_idx).partir_ot := 0;
-      for j in 1 .. g_pedidos(p_idx).detalle.count loop
-        l_codart := g_pedidos(p_idx).detalle(j).cod_art;
-        g_pedidos(p_idx).detalle(j).stock_actual := p_calculo(j).stock_actual;
-        g_pedidos(p_idx).detalle(j).saldo_stock := g_stocks(l_codart) - p_calculo(j).cant_final;
-        g_pedidos(p_idx).detalle(j).cant_final := p_calculo(j).cant_final;
-        g_stocks(g_pedidos(p_idx).detalle(j).cod_art) :=
-              g_stocks(l_codart) - g_pedidos(p_idx).detalle(j).cant_final;
+      p_juegos(p_idx).tiene_stock_ot := 'SI';
+      p_juegos(p_idx).valor_surtir := p_juegos(p_idx).valor;
+      p_juegos(p_idx).partir_ot := 0;
+      for j in 1 .. p_juegos(p_idx).piezas.count loop
+        l_codart := p_juegos(p_idx).piezas(j).cod_art;
+        p_juegos(p_idx).piezas(j).stock_actual := p_calculo(j).stock_actual;
+        p_juegos(p_idx).piezas(j).saldo_stock := g_stocks(l_codart) - p_calculo(j).cant_final;
+        p_juegos(p_idx).piezas(j).cant_final := p_calculo(j).cant_final;
+        g_stocks(p_juegos(p_idx).piezas(j).cod_art) :=
+              g_stocks(l_codart) - p_juegos(p_idx).piezas(j).cant_final;
       end loop;
     end;
 
@@ -277,24 +259,25 @@ create or replace package body surte as
     end;
 
     procedure prueba_partir(
-      io_calculo in out calculo_aat
+      p_calculo in out  calculo_aat
     , p_cant_partir     number
-    , o_es_partible out boolean
+    , p_es_partible out boolean
     ) is
     begin
-      o_es_partible := true;
-      for i in 1 .. io_calculo.count loop
-        if p_cant_partir * io_calculo(i).rendimiento <= io_calculo(i).cant_final then
-          io_calculo(i).cant_final := p_cant_partir * io_calculo(i).rendimiento;
+      p_es_partible := true;
+      for i in 1 .. p_calculo.count loop
+        if p_cant_partir * p_calculo(i).rendimiento <= p_calculo(i).cant_final then
+          p_calculo(i).cant_final := p_cant_partir * p_calculo(i).rendimiento;
         else
-          o_es_partible := false;
+          p_es_partible := false;
         end if;
       end loop;
     end;
 
     procedure parte_orden(
-      p_idx             pls_integer
-    , io_calculo in out calculo_aat
+      p_idx                   pls_integer
+    , p_calculo in out nocopy calculo_aat
+    , p_juegos in out nocopy  juegos_aat
     ) is
       l_codart           codart_t;
       l_cant_partir      number;
@@ -302,50 +285,52 @@ create or replace package body surte as
       l_es_partible      boolean;
       l_cumple_valor_min boolean;
     begin
-      g_pedidos(p_idx).tiene_stock_ot := 'NO';
-      l_cant_partir := multiplo.inferior(find_min(io_calculo), gc_multiplo_partir);
-      prueba_partir(io_calculo, l_cant_partir, l_es_partible);
-      l_valor_surtir := l_cant_partir * g_pedidos(p_idx).preuni;
+      p_juegos(p_idx).tiene_stock_ot := 'NO';
+      l_cant_partir := multiplo.inferior(find_min(p_calculo), gc_multiplo_partir);
+      prueba_partir(p_calculo, l_cant_partir, l_es_partible);
+      l_valor_surtir := l_cant_partir * p_juegos(p_idx).preuni;
       l_cumple_valor_min := l_valor_surtir >= g_param.valor_partir;
       if l_es_partible and l_cumple_valor_min then
-        g_pedidos(p_idx).partir_ot := 1;
-        g_pedidos(p_idx).cant_partir := l_cant_partir;
-        g_pedidos(p_idx).valor_surtir := l_valor_surtir;
-        for j in 1 .. g_pedidos(p_idx).detalle.count loop
-          l_codart := g_pedidos(p_idx).detalle(j).cod_art;
-          g_pedidos(p_idx).detalle(j).stock_actual := io_calculo(j).stock_actual;
-          g_pedidos(p_idx).detalle(j).saldo_stock := g_stocks(l_codart) - io_calculo(j).cant_final;
-          g_pedidos(p_idx).detalle(j).cant_final := io_calculo(j).cant_final;
-          g_stocks(g_pedidos(p_idx).detalle(j).cod_art) :=
-                g_stocks(l_codart) - g_pedidos(p_idx).detalle(j).cant_final;
+        p_juegos(p_idx).partir_ot := 1;
+        p_juegos(p_idx).cant_partir := l_cant_partir;
+        p_juegos(p_idx).valor_surtir := l_valor_surtir;
+        for j in 1 .. p_juegos(p_idx).piezas.count loop
+          l_codart := p_juegos(p_idx).piezas(j).cod_art;
+          p_juegos(p_idx).piezas(j).stock_actual := p_calculo(j).stock_actual;
+          p_juegos(p_idx).piezas(j).saldo_stock := g_stocks(l_codart) - p_calculo(j).cant_final;
+          p_juegos(p_idx).piezas(j).cant_final := p_calculo(j).cant_final;
+          g_stocks(p_juegos(p_idx).piezas(j).cod_art) :=
+                g_stocks(l_codart) - p_juegos(p_idx).piezas(j).cant_final;
         end loop;
       else
-        g_pedidos(p_idx).partir_ot := 0;
+        p_juegos(p_idx).partir_ot := 0;
       end if;
     end;
 
     -- por todos los items de pedidos, consume el stock
     -- progresivamente en el orden dado
-    procedure consume_stock is
+    procedure consume_stock(
+      p_juegos in out nocopy juegos_aat
+    ) is
       l_calculo         calculo_aat;
       l_stock_actual    number  := 0;
       l_tiene_stock_ot  boolean := true;
       l_tiene_stock_itm boolean := true;
       l_puede_partirse  boolean := true;
     begin
-      for i in 1 .. g_pedidos.count loop
+      for i in 1 .. p_juegos.count loop
         l_tiene_stock_ot := true;
         l_puede_partirse := true;
         l_calculo.delete();
 
-        for j in 1 .. g_pedidos(i).detalle.count loop
-          l_stock_actual := g_stocks(g_pedidos(i).detalle(j).cod_art);
+        for j in 1 .. p_juegos(i).piezas.count loop
+          l_stock_actual := g_stocks(p_juegos(i).piezas(j).cod_art);
           l_calculo(j).stock_actual := l_stock_actual;
-          l_calculo(j).rendimiento := g_pedidos(i).detalle(j).rendimiento;
-          l_tiene_stock_itm := l_stock_actual >= g_pedidos(i).detalle(j).cantidad;
+          l_calculo(j).rendimiento := p_juegos(i).piezas(j).rendimiento;
+          l_tiene_stock_itm := l_stock_actual >= p_juegos(i).piezas(j).cantidad;
 
           if l_tiene_stock_itm then
-            l_calculo(j).cant_final := g_pedidos(i).detalle(j).cantidad;
+            l_calculo(j).cant_final := p_juegos(i).piezas(j).cantidad;
           else
             l_tiene_stock_ot := false;
             -- busca partir la orden
@@ -357,108 +342,156 @@ create or replace package body surte as
             end if;
           end if;
 
-          g_pedidos(i).detalle(j).stock_actual := l_stock_actual;
-          g_pedidos(i).detalle(j).tiene_stock_itm := case when l_tiene_stock_itm then 'SI' else 'NO' end;
+          p_juegos(i).piezas(j).stock_actual := l_stock_actual;
+          p_juegos(i).piezas(j).tiene_stock_itm := case when l_tiene_stock_itm then 'SI' else 'NO' end;
         end loop;
 
         case
           when l_tiene_stock_ot then
-            actualiza_saldo(i, l_calculo);
+            actualiza_saldo(i, l_calculo, p_juegos);
           when l_puede_partirse then
-            parte_orden(i, l_calculo);
+            parte_orden(i, l_calculo, p_juegos);
           else
-            g_pedidos(i).tiene_stock_ot := 'NO';
-            g_pedidos(i).partir_ot := 0;
+            p_juegos(i).tiene_stock_ot := 'NO';
+            p_juegos(i).partir_ot := 0;
         end case;
       end loop;
     end;
 
-    procedure carga_colecciones is
+    function crea_coleccion return juegos_aat is
+      l_juegos juegos_aat;
     begin
-      for r in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque) loop
+      for r_pedido in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque) loop
         -- para el primer quiebre de grupo (item pedido)
         -- normaliza la data
-        if r.oa is not null then
-          crea_maestro(r);
-          crea_detalle(r);
+        if r_pedido.oa is not null then
+          crea_maestro(r_pedido, l_juegos);
+          crea_detalle(r_pedido, l_juegos);
         else
-          crea_detalle(r);
+          crea_detalle(r_pedido, l_juegos);
         end if;
       end loop;
+
+      return l_juegos;
     end;
 
     -- porque Oracle tovadia no acepta forall con collecciones anidadas
     -- tampoco ocepta forall con colleciones indexadas por varchar2
-    procedure desnormaliza is
+    procedure desnormaliza(
+      p_juegos                juegos_aat
+    , p_juegos_tmp out nocopy tmp_jgo_aat
+    , p_piezas_tmp out nocopy tmp_pza_aat
+    ) is
     begin
-      for i in 1 .. g_pedidos.count loop
+      for i in 1 .. p_juegos.count loop
+        -- maestro
+        p_juegos_tmp(p_juegos_tmp.count + 1).ranking := p_juegos(i).ranking;
+        p_juegos_tmp(p_juegos_tmp.count).nro_pedido := p_juegos(i).nro_pedido;
+        p_juegos_tmp(p_juegos_tmp.count).itm_pedido := p_juegos(i).itm_pedido;
+        p_juegos_tmp(p_juegos_tmp.count).cod_cliente := p_juegos(i).cod_cliente;
+        p_juegos_tmp(p_juegos_tmp.count).nom_cliente := p_juegos(i).nom_cliente;
+        p_juegos_tmp(p_juegos_tmp.count).fch_pedido := p_juegos(i).fch_pedido;
+        p_juegos_tmp(p_juegos_tmp.count).ot_tipo := p_juegos(i).ot_tipo;
+        p_juegos_tmp(p_juegos_tmp.count).ot_serie := p_juegos(i).ot_serie;
+        p_juegos_tmp(p_juegos_tmp.count).ot_numero := p_juegos(i).ot_numero;
+        p_juegos_tmp(p_juegos_tmp.count).ot_estado := p_juegos(i).ot_estado;
+        p_juegos_tmp(p_juegos_tmp.count).cod_jgo := p_juegos(i).formu_art;
+        p_juegos_tmp(p_juegos_tmp.count).preuni := p_juegos(i).preuni;
+        p_juegos_tmp(p_juegos_tmp.count).valor := p_juegos(i).valor;
+        p_juegos_tmp(p_juegos_tmp.count).valor_surtir := p_juegos(i).valor_surtir;
+        p_juegos_tmp(p_juegos_tmp.count).es_juego := p_juegos(i).es_juego;
+        p_juegos_tmp(p_juegos_tmp.count).tiene_importado := p_juegos(i).tiene_importado;
+        p_juegos_tmp(p_juegos_tmp.count).impreso := p_juegos(i).impreso;
+        p_juegos_tmp(p_juegos_tmp.count).fch_impresion := p_juegos(i).fch_impresion;
+        p_juegos_tmp(p_juegos_tmp.count).partir_ot := p_juegos(i).partir_ot;
+        p_juegos_tmp(p_juegos_tmp.count).cant_partir := p_juegos(i).cant_partir;
+        p_juegos_tmp(p_juegos_tmp.count).tiene_stock_ot := p_juegos(i).tiene_stock_ot;
+        p_juegos_tmp(p_juegos_tmp.count).es_prioritario := p_juegos(i).es_prioritario;
 
-        for j in 1 .. g_pedidos(i).detalle.count loop
-          -- maestro
-          g_tmp(g_tmp.count + 1).ranking := g_pedidos(i).ranking;
-          g_tmp(g_tmp.count).cod_cliente := g_pedidos(i).cod_cliente;
-          g_tmp(g_tmp.count).nom_cliente := g_pedidos(i).nom_cliente;
-          g_tmp(g_tmp.count).nro_pedido := g_pedidos(i).nro_pedido;
-          g_tmp(g_tmp.count).itm_pedido := g_pedidos(i).itm_pedido;
-          g_tmp(g_tmp.count).fch_pedido := g_pedidos(i).fch_pedido;
-          g_tmp(g_tmp.count).ot_tipo := g_pedidos(i).ot_tipo;
-          g_tmp(g_tmp.count).ot_serie := g_pedidos(i).ot_serie;
-          g_tmp(g_tmp.count).ot_numero := g_pedidos(i).ot_numero;
-          g_tmp(g_tmp.count).formu_art := g_pedidos(i).formu_art;
-          g_tmp(g_tmp.count).es_juego := g_pedidos(i).es_juego;
-          g_tmp(g_tmp.count).tiene_importado := g_pedidos(i).tiene_importado;
-          g_tmp(g_tmp.count).ot_estado := g_pedidos(i).ot_estado;
-          g_tmp(g_tmp.count).tiene_stock_ot := g_pedidos(i).tiene_stock_ot;
-          g_tmp(g_tmp.count).valor := g_pedidos(i).valor;
-          g_tmp(g_tmp.count).valor_surtir := g_pedidos(i).valor_surtir;
-          g_tmp(g_tmp.count).impreso := g_pedidos(i).impreso;
-          g_tmp(g_tmp.count).fch_impresion := g_pedidos(i).fch_impresion;
-          g_tmp(g_tmp.count).partir_ot := g_pedidos(i).partir_ot;
-          g_tmp(g_tmp.count).cant_partir := g_pedidos(i).cant_partir;
-          g_tmp(g_tmp.count).es_prioritario := g_pedidos(i).es_prioritario;
-
+        for j in 1 .. p_juegos(i).piezas.count loop
           -- detalle
-          g_tmp(g_tmp.count).cod_art := g_pedidos(i).detalle(j).cod_art;
-          g_tmp(g_tmp.count).cantidad := g_pedidos(i).detalle(j).cantidad;
-          g_tmp(g_tmp.count).rendimiento := g_pedidos(i).detalle(j).rendimiento;
-          g_tmp(g_tmp.count).saldo_stock := g_pedidos(i).detalle(j).saldo_stock;
-          g_tmp(g_tmp.count).sobrante := g_pedidos(i).detalle(j).sobrante;
-          g_tmp(g_tmp.count).faltante := g_pedidos(i).detalle(j).faltante;
-          g_tmp(g_tmp.count).linea := g_pedidos(i).detalle(j).linea;
-          g_tmp(g_tmp.count).es_importado := g_pedidos(i).detalle(j).es_importado;
-          g_tmp(g_tmp.count).tiene_stock_itm := g_pedidos(i).detalle(j).tiene_stock_itm;
-          g_tmp(g_tmp.count).stock_inicial := g_pedidos(i).detalle(j).stock_inicial;
-          g_tmp(g_tmp.count).cant_final := g_pedidos(i).detalle(j).cant_final;
+          p_piezas_tmp(p_piezas_tmp.count + 1).nro_pedido := p_juegos(i).nro_pedido;
+          p_piezas_tmp(p_piezas_tmp.count).itm_pedido := p_juegos(i).itm_pedido;
+          p_piezas_tmp(p_piezas_tmp.count).cod_pza := p_juegos(i).piezas(j).cod_art;
+          p_piezas_tmp(p_piezas_tmp.count).cantidad := p_juegos(i).piezas(j).cantidad;
+          p_piezas_tmp(p_piezas_tmp.count).rendimiento := p_juegos(i).piezas(j).rendimiento;
+          p_piezas_tmp(p_piezas_tmp.count).stock_inicial := p_juegos(i).piezas(j).stock_inicial;
+          p_piezas_tmp(p_piezas_tmp.count).stock_actual := p_juegos(i).piezas(j).stock_actual;
+          p_piezas_tmp(p_piezas_tmp.count).saldo_stock := p_juegos(i).piezas(j).saldo_stock;
+          p_piezas_tmp(p_piezas_tmp.count).sobrante := p_juegos(i).piezas(j).sobrante;
+          p_piezas_tmp(p_piezas_tmp.count).faltante := p_juegos(i).piezas(j).faltante;
+          p_piezas_tmp(p_piezas_tmp.count).cant_final := p_juegos(i).piezas(j).cant_final;
+          p_piezas_tmp(p_piezas_tmp.count).linea := p_juegos(i).piezas(j).linea;
+          p_piezas_tmp(p_piezas_tmp.count).es_importado := p_juegos(i).piezas(j).es_importado;
+          p_piezas_tmp(p_piezas_tmp.count).tiene_stock_itm := p_juegos(i).piezas(j).tiene_stock_itm;
         end loop;
 
       end loop;
     end;
 
-    procedure guarda is
+    procedure guarda_juegos(
+      p_juegos_tmp tmp_jgo_aat
+    ) is
     begin
-      delete from tmp_ordenes_surtir;
+      delete from tmp_surte_jgo;
 
-      forall i in 1 .. g_tmp.count save exceptions
-        insert into tmp_ordenes_surtir values g_tmp(i);
+      forall i in 1 .. p_juegos_tmp.count save exceptions
+        insert into tmp_surte_jgo values p_juegos_tmp(i);
     exception
       when bulk_errors then
         for i in 1 .. sql%bulk_exceptions.count loop
           logger.log(
-                'OA: ' || g_tmp(sql%bulk_exceptions(i).error_index).ot_numero ||
-                ' Articulo: ' || g_tmp(sql%bulk_exceptions(i).error_index).cod_art ||
+                'OA: ' || p_juegos_tmp(sql%bulk_exceptions(i).error_index).ot_numero ||
+                ' Articulo: ' || p_juegos_tmp(sql%bulk_exceptions(i).error_index).cod_jgo ||
                 ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
             );
         end loop;
 
-        commit;
+    end;
+
+    procedure guarda_piezas(
+      p_piezas_tmp tmp_pza_aat
+    ) is
+    begin
+      delete from tmp_surte_pza;
+
+      forall i in 1 .. p_piezas_tmp.count save exceptions
+        insert into tmp_surte_pza values p_piezas_tmp(i);
+    exception
+      when bulk_errors then
+        for i in 1 .. sql%bulk_exceptions.count loop
+          logger.log(
+                'pedido: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).nro_pedido ||
+                ' item: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).itm_pedido ||
+                ' pza: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).cod_pza ||
+                ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
+            );
+        end loop;
+
+    end;
+
+    procedure guarda(
+      p_juegos_tmp in tmp_jgo_aat
+    , p_piezas_tmp in tmp_pza_aat
+    ) is
+    begin
+      guarda_juegos(p_juegos_tmp);
+      guarda_piezas(p_piezas_tmp);
+      commit;
     end;
   begin
-    init();
-    carga_colecciones();
-    consume_stock();
-    desnormaliza();
-    guarda();
-    commit;
+    declare
+      l_juegos     juegos_aat;
+      l_juegos_tmp tmp_jgo_aat;
+      l_piezas_tmp tmp_pza_aat;
+    begin
+      init();
+      l_juegos := crea_coleccion();
+      consume_stock(l_juegos);
+      desnormaliza(l_juegos, l_juegos_tmp, l_piezas_tmp);
+      guarda(l_juegos_tmp, l_piezas_tmp);
+      commit;
+    end;
   end;
 
   procedure parte_ot(
