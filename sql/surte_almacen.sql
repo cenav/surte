@@ -899,3 +899,108 @@ select *
   from vw_surte_pza
  where nro_pedido = 14743
    and itm_pedido = 45;
+
+select *
+  from articul
+ where cod_art = 'SA SB95353-4'
+   and tp_art = 'A';
+
+select *
+  from pcmasters
+ where cod_art = 'TO450.735PA-I';
+
+-- SAO explosion
+select f.cod_art, f.cod_for, f.tipo, f.canti, f.neto, f.linea, a.tp_art
+  from pcformulas f
+       join articul a on f.cod_for = a.cod_art
+ where f.cod_art = 'SA SB95353-4'
+   and a.tp_art = 'P';
+
+
+declare
+  type formula_t is record (
+    cod_for pcformulas.cod_art%type,
+    canti   pcformulas.canti%type
+  );
+
+  type formulas_aat is table of formula_t index by pls_integer;
+
+  type master_t is record (
+    cod_art pcmasters.cod_art%type,
+    formula formulas_aat
+  );
+
+  type master_aat is table of master_t index by varchar2(30);
+
+  l_idx    varchar2(30);
+  l_start  pls_integer;
+  l_master master_aat;
+
+  cursor formulas_cr is
+    -- SAO explosion
+    select f.cod_art, f.cod_for, f.tipo, f.canti, f.neto, f.linea, a.tp_art
+         , case when lag(f.cod_art) over (order by null) = f.cod_art then null else f.cod_art end quiebre
+      from pcformulas f
+           join articul m on f.cod_art = m.cod_art
+           join articul a on f.cod_for = a.cod_art
+     where m.tp_art = 'A'
+       and a.tp_art = 'P'
+     order by f.cod_art;
+
+  procedure master(
+    p_formula formulas_cr%rowtype
+  ) is
+  begin
+    l_master(p_formula.cod_art).cod_art := p_formula.cod_art;
+  end;
+
+  procedure detail(
+    p_formula formulas_cr%rowtype
+  ) is
+    l_idx pls_integer;
+  begin
+    l_idx := l_master(p_formula.cod_art).formula.count + 1;
+    l_master(p_formula.cod_art).formula(l_idx).cod_for := p_formula.cod_for;
+  end;
+
+  procedure show_elapsed(
+    name_in in varchar2
+  ) is
+  begin
+    dbms_output.put_line(
+          name_in
+          || ' elapsed CPU time: '
+          || to_char(dbms_utility.get_cpu_time - l_start));
+  end show_elapsed;
+begin
+  l_start := dbms_utility.get_cpu_time;
+
+  for formula in formulas_cr loop
+    if formula.quiebre is not null then
+      master(formula);
+      detail(formula);
+    elsif formula.quiebre is null then
+      detail(formula);
+    end if;
+  end loop;
+
+  show_elapsed('Procedure');
+  dbms_output.put_line('Total registros ' || l_master.count);
+
+  l_idx := 'SA SB95353-4';
+  for i in l_master(l_idx).formula.first .. l_master(l_idx).formula.last loop
+    dbms_output.put_line(l_master(l_idx).formula(i).cod_for);
+  end loop;
+end;
+
+
+declare
+  l_explosion surte_formula.master_aat;
+  l_idx       surte_util.t_articulo;
+begin
+  l_idx := 'SA SB95353-4';
+  l_explosion := surte_formula.explosion(l_idx);
+  for i in l_explosion(l_idx).formula.first .. l_explosion(l_idx).formula.last loop
+    dbms_output.put_line(l_explosion(l_idx).formula(i).cod_for);
+  end loop;
+end;

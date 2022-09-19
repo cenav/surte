@@ -749,6 +749,7 @@ create or replace package body surte as
       raise;
   end;
 
+
   procedure parte_ot_masivo(
     p_prioritario pls_integer default 1
   ) is
