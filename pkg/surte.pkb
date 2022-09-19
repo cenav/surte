@@ -14,6 +14,16 @@ create or replace package body surte as
     cant_final   number
   );
 
+  type calculo_aat is table of calculo_rt index by pls_integer;
+
+  type sao_rt is record (
+    cod_sao  varchar2(30),
+    cantidad number,
+    color    varchar2(1)
+  );
+
+  type sao_aat is table of sao_rt index by pls_integer;
+
   type pieza_rt is record (
     cod_art         tmp_surte_pza.cod_pza%type,
     cantidad        tmp_surte_pza.cantidad%type,
@@ -26,7 +36,8 @@ create or replace package body surte as
     cant_final      tmp_surte_pza.cant_final%type,
     linea           tmp_surte_pza.linea%type,
     es_importado    tmp_surte_pza.es_importado%type,
-    tiene_stock_itm tmp_surte_pza.tiene_stock_itm%type
+    tiene_stock_itm tmp_surte_pza.tiene_stock_itm%type,
+    saos            sao_aat
   );
 
   type pieza_aat is table of pieza_rt index by pls_integer;
@@ -57,12 +68,12 @@ create or replace package body surte as
     piezas          pieza_aat
   );
 
-  type stock_aat is table of stock_t index by codart_t;
   type juegos_aat is table of juego_rt index by ranking_t;
+
+  type stock_aat is table of stock_t index by codart_t;
   type tmp_aat is table of tmp_ordenes_surtir%rowtype index by pls_integer;
   type tmp_jgo_aat is table of tmp_surte_jgo%rowtype index by pls_integer;
   type tmp_pza_aat is table of tmp_surte_pza%rowtype index by pls_integer;
-  type calculo_aat is table of calculo_rt index by pls_integer;
 
   bulk_errors exception;
   pragma exception_init (bulk_errors, -24381);
@@ -74,7 +85,7 @@ create or replace package body surte as
              , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
              , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
              , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
-             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario
+             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao
              , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
              , dense_rank() over (
           order by case when p.prioritario = 1 then v.es_prioritario end desc
@@ -171,12 +182,14 @@ create or replace package body surte as
   , p_dias     pls_integer default null
   , p_empaque  varchar2 default null
   ) is
-    g_stocks stock_aat;
-    g_param  param_surte%rowtype;
+    g_stocks    stock_aat;
+    g_explosion surte_formula.master_aat;
+    g_param     param_surte%rowtype;
 
     procedure init is
     begin
       g_stocks := carga_stock();
+      g_explosion := surte_formula.explosion();
       g_param := api_param_surte.onerow();
     end;
 
@@ -206,9 +219,20 @@ create or replace package body surte as
       p_juegos(p_pedido.ranking).es_prioritario := p_pedido.es_prioritario;
     end;
 
+    procedure crea_sao(
+      p_juego_idx            pls_integer
+    , p_pieza_idx            pls_integer
+    , p_juegos in out nocopy juegos_aat
+    ) is
+      l_idx pls_integer := 0;
+    begin
+      l_idx := p_juegos(p_juego_idx).piezas(p_pieza_idx).saos.count + 1;
+      p_juegos(p_juego_idx).piezas(p_pieza_idx).saos(l_idx).cod_sao := null;
+    end;
+
     procedure crea_detalle(
-      p_pedido in     pedidos_cur%rowtype
-    , p_juegos in out juegos_aat
+      p_pedido in            pedidos_cur%rowtype
+    , p_juegos in out nocopy juegos_aat
     ) is
       l_idx pls_integer := 0;
     begin
@@ -222,6 +246,9 @@ create or replace package body surte as
       p_juegos(p_pedido.ranking).piezas(l_idx).es_importado := p_pedido.es_importado;
       p_juegos(p_pedido.ranking).piezas(l_idx).rendimiento := p_pedido.rendimiento;
       p_juegos(p_pedido.ranking).piezas(l_idx).tiene_stock_itm := null;
+      if p_pedido.es_sao = 1 then
+        crea_sao(p_pedido.ranking, l_idx, p_juegos);
+      end if;
     end;
 
     procedure actualiza_saldo(
