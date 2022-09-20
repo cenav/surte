@@ -17,12 +17,20 @@ create or replace package body surte as
   type calculo_aat is table of calculo_rt index by pls_integer;
 
   type sao_rt is record (
-    cod_sao  varchar2(30),
-    cantidad number,
-    color    varchar2(1)
+    cod_sao         tmp_surte_sao.cod_sao%type,
+    cantidad        tmp_surte_sao.cantidad%type,
+    id_color        tmp_surte_sao.id_color%type,
+    rendimiento     tmp_surte_sao.rendimiento%type,
+    stock_inicial   tmp_surte_sao.stock_inicial%type,
+    saldo_stock     tmp_surte_sao.saldo_stock%type,
+    sobrante        tmp_surte_sao.sobrante%type,
+    faltante        tmp_surte_sao.faltante%type,
+    cant_final      tmp_surte_sao.cant_final%type,
+    es_importado    tmp_surte_sao.es_importado%type,
+    tiene_stock_itm tmp_surte_sao.tiene_stock_itm%type
   );
 
-  type sao_aat is table of sao_rt index by pls_integer;
+  type saos_aat is table of sao_rt index by pls_integer;
 
   type pieza_rt is record (
     cod_art         tmp_surte_pza.cod_pza%type,
@@ -37,10 +45,10 @@ create or replace package body surte as
     linea           tmp_surte_pza.linea%type,
     es_importado    tmp_surte_pza.es_importado%type,
     tiene_stock_itm tmp_surte_pza.tiene_stock_itm%type,
-    saos            sao_aat
+    saos            saos_aat
   );
 
-  type pieza_aat is table of pieza_rt index by pls_integer;
+  type piezas_aat is table of pieza_rt index by pls_integer;
 
   type juego_rt is record (
     ranking         tmp_surte_jgo.ranking%type,
@@ -65,15 +73,17 @@ create or replace package body surte as
     cant_partir     tmp_surte_jgo.cant_partir%type,
     tiene_stock_ot  tmp_surte_jgo.tiene_stock_ot%type,
     es_prioritario  tmp_surte_jgo.es_prioritario%type,
-    piezas          pieza_aat
+    piezas          piezas_aat
   );
 
   type juegos_aat is table of juego_rt index by ranking_t;
 
   type stock_aat is table of stock_t index by codart_t;
   type tmp_aat is table of tmp_ordenes_surtir%rowtype index by pls_integer;
+
   type tmp_jgo_aat is table of tmp_surte_jgo%rowtype index by pls_integer;
   type tmp_pza_aat is table of tmp_surte_pza%rowtype index by pls_integer;
+  type tmp_sao_aat is table of tmp_surte_sao%rowtype index by pls_integer;
 
   bulk_errors exception;
   pragma exception_init (bulk_errors, -24381);
@@ -113,28 +123,54 @@ create or replace package body surte as
   -- private routines
   function carga_stock return stock_aat is
     l_stocks stock_aat;
-  begin
-    for r in (
-      -- resta ordenes que estan impresas al stock actual de las piezas
-        with impresas as (
-          select o.art_cod_art, sum(o.cant_formula) as impreso
-            from vw_ordenes_impresas_piezas o
-                 join param_surte p on p.id_param = 1
-           where o.dias_impreso <= p.dias_impreso_bien
-           group by o.art_cod_art
-          )
-           , stock as (
-          select distinct art_cod_art, stock
-            from vw_ordenes_pedido_pendiente
-          )
-      select s.art_cod_art, greatest(s.stock - nvl(i.impreso, 0), 0) as stock
-        from stock s
-             left join impresas i on s.art_cod_art = i.art_cod_art
-      )
-    loop
-      l_stocks(r.art_cod_art) := r.stock;
-    end loop;
 
+    procedure piezas(
+      p_stocks in out nocopy stock_aat
+    ) is
+    begin
+      for r in (
+        -- resta ordenes que estan impresas al stock actual de las piezas
+          with impresas as (
+            select o.art_cod_art, sum(o.cant_formula) as impreso
+              from vw_ordenes_impresas_piezas o
+                   join param_surte p on p.id_param = 1
+             where o.dias_impreso <= p.dias_impreso_bien
+             group by o.art_cod_art
+            )
+             , stock as (
+            select distinct art_cod_art, stock
+              from vw_ordenes_pedido_pendiente
+            )
+        select s.art_cod_art, greatest(s.stock - nvl(i.impreso, 0), 0) as stock
+          from stock s
+               left join impresas i on s.art_cod_art = i.art_cod_art
+        )
+      loop
+        p_stocks(r.art_cod_art) := r.stock;
+      end loop;
+    end;
+
+    procedure saos(
+      p_stocks in out nocopy stock_aat
+    ) is
+    begin
+      for r in (
+          with saos as (
+            select f.cod_for
+              from vw_formula_saos f
+             group by f.cod_for
+            )
+        select a.cod_for, s.stock
+          from saos a
+               join vw_stock_almacen s on a.cod_for = s.cod_art
+        )
+      loop
+        p_stocks(r.cod_for) := r.stock;
+      end loop;
+    end;
+  begin
+    piezas(l_stocks);
+    saos(l_stocks);
     return l_stocks;
   end;
 
@@ -193,6 +229,13 @@ create or replace package body surte as
       g_param := api_param_surte.onerow();
     end;
 
+    function get_stock(
+      p_codart codart_t
+    ) return number is
+    begin
+      return case when g_stocks.exists(p_codart) then g_stocks(p_codart) else 0 end;
+    end;
+
     procedure crea_maestro(
       p_pedido in     pedidos_cur%rowtype
     , p_juegos in out juegos_aat
@@ -219,15 +262,29 @@ create or replace package body surte as
       p_juegos(p_pedido.ranking).es_prioritario := p_pedido.es_prioritario;
     end;
 
-    procedure crea_sao(
-      p_juego_idx            pls_integer
-    , p_pieza_idx            pls_integer
-    , p_juegos in out nocopy juegos_aat
-    ) is
-      l_idx pls_integer := 0;
+    function crea_sao(
+      p_formula  surte_formula.formula_rt
+    , p_cantidad number
+    ) return sao_rt is
+      l_sao sao_rt;
     begin
-      l_idx := p_juegos(p_juego_idx).piezas(p_pieza_idx).saos.count + 1;
-      p_juegos(p_juego_idx).piezas(p_pieza_idx).saos(l_idx).cod_sao := null;
+      l_sao.cod_sao := p_formula.cod_for;
+      l_sao.rendimiento := p_formula.canti;
+      l_sao.cantidad := p_formula.canti * p_cantidad;
+      l_sao.stock_inicial := get_stock(p_formula.cod_for);
+      return l_sao;
+    end;
+
+    function crea_saos(
+      p_formulas surte_formula.formulas_aat
+    , p_cantidad number
+    ) return saos_aat is
+      l_saos saos_aat;
+    begin
+      for i in 1 .. p_formulas.count loop
+        l_saos(i) := crea_sao(p_formulas(i), p_cantidad);
+      end loop;
+      return l_saos;
     end;
 
     procedure crea_detalle(
@@ -246,8 +303,10 @@ create or replace package body surte as
       p_juegos(p_pedido.ranking).piezas(l_idx).es_importado := p_pedido.es_importado;
       p_juegos(p_pedido.ranking).piezas(l_idx).rendimiento := p_pedido.rendimiento;
       p_juegos(p_pedido.ranking).piezas(l_idx).tiene_stock_itm := null;
-      if p_pedido.es_sao = 1 then
-        crea_sao(p_pedido.ranking, l_idx, p_juegos);
+
+      if p_pedido.es_sao = 1 and g_explosion.exists(p_pedido.art_cod_art) then
+        p_juegos(p_pedido.ranking).piezas(l_idx).saos :=
+            crea_saos(g_explosion(p_pedido.art_cod_art).formulas, p_pedido.cant_formula);
       end if;
     end;
 
@@ -408,6 +467,7 @@ create or replace package body surte as
       p_juegos                juegos_aat
     , p_juegos_tmp out nocopy tmp_jgo_aat
     , p_piezas_tmp out nocopy tmp_pza_aat
+    , p_saos_tmp out nocopy   tmp_sao_aat
     ) is
     begin
       for i in 1 .. p_juegos.count loop
@@ -451,6 +511,24 @@ create or replace package body surte as
           p_piezas_tmp(p_piezas_tmp.count).linea := p_juegos(i).piezas(j).linea;
           p_piezas_tmp(p_piezas_tmp.count).es_importado := p_juegos(i).piezas(j).es_importado;
           p_piezas_tmp(p_piezas_tmp.count).tiene_stock_itm := p_juegos(i).piezas(j).tiene_stock_itm;
+
+          for k in 1 .. p_juegos(i).piezas(j).saos.count loop
+            -- saos
+            p_saos_tmp(p_saos_tmp.count + 1).nro_pedido := p_juegos(i).nro_pedido;
+            p_saos_tmp(p_saos_tmp.count).itm_pedido := p_juegos(i).itm_pedido;
+            p_saos_tmp(p_saos_tmp.count).cod_pza := p_juegos(i).piezas(j).cod_art;
+            p_saos_tmp(p_saos_tmp.count).cod_sao := p_juegos(i).piezas(j).saos(k).cod_sao;
+            p_saos_tmp(p_saos_tmp.count).cantidad := p_juegos(i).piezas(j).saos(k).cantidad;
+            p_saos_tmp(p_saos_tmp.count).rendimiento := p_juegos(i).piezas(j).saos(k).rendimiento;
+            p_saos_tmp(p_saos_tmp.count).stock_inicial := p_juegos(i).piezas(j).saos(k).stock_inicial;
+            p_saos_tmp(p_saos_tmp.count).saldo_stock := p_juegos(i).piezas(j).saos(k).saldo_stock;
+            p_saos_tmp(p_saos_tmp.count).sobrante := p_juegos(i).piezas(j).saos(k).sobrante;
+            p_saos_tmp(p_saos_tmp.count).faltante := p_juegos(i).piezas(j).saos(k).faltante;
+            p_saos_tmp(p_saos_tmp.count).cant_final := p_juegos(i).piezas(j).saos(k).cant_final;
+            p_saos_tmp(p_saos_tmp.count).es_importado := p_juegos(i).piezas(j).saos(k).es_importado;
+            p_saos_tmp(p_saos_tmp.count).tiene_stock_itm := p_juegos(i).piezas(j).saos(k).tiene_stock_itm;
+            p_saos_tmp(p_saos_tmp.count).id_color := p_juegos(i).piezas(j).saos(k).id_color;
+          end loop;
         end loop;
 
       end loop;
@@ -473,7 +551,6 @@ create or replace package body surte as
                 ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
             );
         end loop;
-
     end;
 
     procedure guarda_piezas(
@@ -494,29 +571,52 @@ create or replace package body surte as
                 ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
             );
         end loop;
+    end;
 
+    procedure guarda_saos(
+      p_saos_tmp tmp_sao_aat
+    ) is
+    begin
+      delete from tmp_surte_sao;
+
+      forall i in 1 .. p_saos_tmp.count save exceptions
+        insert into tmp_surte_sao values p_saos_tmp(i);
+    exception
+      when bulk_errors then
+        for i in 1 .. sql%bulk_exceptions.count loop
+          logger.log(
+                'pedido: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).nro_pedido ||
+                ' item: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).itm_pedido ||
+                ' pza: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).cod_pza ||
+                ' sao: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).cod_sao ||
+                ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
+            );
+        end loop;
     end;
 
     procedure guarda(
       p_juegos_tmp in tmp_jgo_aat
     , p_piezas_tmp in tmp_pza_aat
+    , p_saos_tmp in   tmp_sao_aat
     ) is
     begin
       guarda_juegos(p_juegos_tmp);
       guarda_piezas(p_piezas_tmp);
-      commit;
+      guarda_saos(p_saos_tmp);
     end;
+
   begin
     declare
       l_juegos     juegos_aat;
       l_juegos_tmp tmp_jgo_aat;
       l_piezas_tmp tmp_pza_aat;
+      l_saos_tmp   tmp_sao_aat;
     begin
       init();
       l_juegos := crea_coleccion();
       consume_stock(l_juegos);
-      desnormaliza(l_juegos, l_juegos_tmp, l_piezas_tmp);
-      guarda(l_juegos_tmp, l_piezas_tmp);
+      desnormaliza(l_juegos, l_juegos_tmp, l_piezas_tmp, l_saos_tmp);
+      guarda(l_juegos_tmp, l_piezas_tmp, l_saos_tmp);
       commit;
     end;
   end;

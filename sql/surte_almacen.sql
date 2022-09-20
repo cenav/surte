@@ -1000,7 +1000,79 @@ declare
 begin
   l_idx := 'SA SB95353-4';
   l_explosion := surte_formula.explosion(l_idx);
-  for i in l_explosion(l_idx).formula.first .. l_explosion(l_idx).formula.last loop
-    dbms_output.put_line(l_explosion(l_idx).formula(i).cod_for);
+  for i in l_explosion(l_idx).formulas.first .. l_explosion(l_idx).formulas.last loop
+    dbms_output.put_line(l_explosion(l_idx).formulas(i).cod_for);
   end loop;
+end;
+
+declare
+  l_explosion surte_formula.master_aat;
+  l_idx       surte_util.t_articulo;
+begin
+  l_idx := 'SA SB95353-4';
+  l_explosion := surte_formula.explosion(l_idx);
+  if l_explosion.exists(l_idx) then
+    dbms_output.put_line('SI');
+  else
+    dbms_output.put_line('NO');
+  end if;
+  dbms_output.put_line(l_explosion.count);
+end;
+
+delete from tmp_surte_jgo;
+delete from tmp_surte_pza;
+
+select * from tmp_surte_jgo;
+select * from tmp_surte_pza;
+select * from tmp_surte_sao;
+
+
+  with detalle as (
+    select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
+         , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
+         , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
+         , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
+         , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao
+         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
+         , dense_rank() over (
+      order by case when p.prioritario = 1 then v.es_prioritario end desc
+--             , case when trunc(sysdate) - v.fch_pedido > p_dias then 1 else 0 end desc --> 25/08/22 solo filtre mayores a fecha
+        , case when v.valor > p.valor_item then 1 else 0 end desc
+        , v.es_juego
+        , v.valor desc
+      ) as ranking
+      from vw_ordenes_pedido_pendiente v
+           join param_surte p on p.id_param = 1
+     where (v.es_prioritario = 1
+       or ((v.pais = :p_pais or :p_pais is null)
+         and (v.vendedor = :p_vendedor or :p_vendedor is null)
+         and (v.empaque = :p_empaque or :p_empaque is null)
+         and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
+         and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
+              not exists(select * from tmp_selecciona_cliente)))
+       )
+       and v.impreso = 'NO'
+    )
+select *
+  from detalle
+ where detalle.pedido = 14774
+   and detalle.pedido_item = 8
+ order by ranking;
+
+-- 180.761FB
+
+select *
+  from logger_logs
+ order by id desc;
+
+select * from vw_surte_sao;
+
+select * from color_surtimiento;
+
+select *
+  from pcformulas
+ where cod_art = 'SA 3540MX3-1';
+
+begin
+  surte.por_item();
 end;

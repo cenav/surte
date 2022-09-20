@@ -1,9 +1,7 @@
 create or replace view vw_ordenes_pedido_pendiente as
   with stock_actual as (
-    select cod_art, sum(stock) as stock
-      from almacen
-     where cod_alm in ('03', '05', '77', '16')
-     group by cod_art
+    select cod_art, stock
+      from vw_stock_almacen
     )
      , impresion as (
     select nuot_tipoot_codigo, nuot_serie, numero, max(fecha) as fch_impresion
