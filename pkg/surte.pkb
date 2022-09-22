@@ -19,7 +19,6 @@ create or replace package body surte as
   type sao_rt is record (
     cod_sao         tmp_surte_sao.cod_sao%type,
     cantidad        tmp_surte_sao.cantidad%type,
-    id_color        tmp_surte_sao.id_color%type,
     rendimiento     tmp_surte_sao.rendimiento%type,
     stock_inicial   tmp_surte_sao.stock_inicial%type,
     saldo_stock     tmp_surte_sao.saldo_stock%type,
@@ -27,7 +26,8 @@ create or replace package body surte as
     faltante        tmp_surte_sao.faltante%type,
     cant_final      tmp_surte_sao.cant_final%type,
     es_importado    tmp_surte_sao.es_importado%type,
-    tiene_stock_itm tmp_surte_sao.tiene_stock_itm%type
+    tiene_stock_itm tmp_surte_sao.tiene_stock_itm%type,
+    id_color        tmp_surte_sao.id_color%type
   );
 
   type saos_aat is table of sao_rt index by pls_integer;
@@ -45,6 +45,7 @@ create or replace package body surte as
     linea           tmp_surte_pza.linea%type,
     es_importado    tmp_surte_pza.es_importado%type,
     tiene_stock_itm tmp_surte_pza.tiene_stock_itm%type,
+    id_color        tmp_surte_pza.id_color%type,
     saos            saos_aat
   );
 
@@ -148,7 +149,7 @@ create or replace package body surte as
       loop
         p_stocks(r.art_cod_art) := r.stock;
       end loop;
-    end;
+    end piezas;
 
     procedure saos(
       p_stocks in out nocopy stock_aat
@@ -167,7 +168,7 @@ create or replace package body surte as
       loop
         p_stocks(r.cod_for) := r.stock;
       end loop;
-    end;
+    end saos;
   begin
     piezas(l_stocks);
     saos(l_stocks);
