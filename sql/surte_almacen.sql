@@ -1021,11 +1021,16 @@ end;
 
 delete from tmp_surte_jgo;
 delete from tmp_surte_pza;
+delete from tmp_surte_sao;
 
 select * from tmp_surte_jgo;
 select * from tmp_surte_pza;
 select * from tmp_surte_sao;
 
+
+select *
+  from tmp_surte_pza
+ where stock_inicial != stock_actual;
 
 -- 180.761FB
 
@@ -1044,3 +1049,15 @@ select *
 begin
   surte.por_item();
 end;
+
+select *
+  from tmp_surte_jgo
+ where tiene_stock_ot = 'NO'
+    or partir_ot = 0;
+
+
+
+
+select *
+  from all_arguments
+ where package_name = 'SURTE';

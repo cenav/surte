@@ -2,16 +2,28 @@ create or replace package body surte as
   gc_scope_prefix constant varchar2(31) := lower($$plsql_unit) || '.';
   gc_multiplo_partir constant simple_integer := 5;
 
+  c_header constant simple_integer := 1;
+
   subtype string_t is varchar2(32672);
   subtype stock_t is number;
   subtype codart_t is articul.cod_art%type;
   subtype ranking_t is pls_integer;
 
-  type calculo_rt is record (
+  type detalle_rt is record (
     stock_actual number,
     rendimiento  number,
     faltante     number,
-    cant_final   number
+    cant_final   number,
+    tiene_stock  boolean
+  );
+
+  type detalle_aat is table of detalle_rt index by pls_integer;
+
+  type calculo_rt is record (
+    tiene_stock_ot boolean := true,
+    puede_partirse boolean,
+    es_partible    boolean,
+    detalle        detalle_aat
   );
 
   type calculo_aat is table of calculo_rt index by pls_integer;
@@ -237,6 +249,15 @@ create or replace package body surte as
       return case when g_stocks.exists(p_codart) then g_stocks(p_codart) else 0 end;
     end;
 
+
+    procedure set_stock(
+      p_codart   codart_t
+    , p_cantidad number
+    ) is
+    begin
+      g_stocks(p_codart) := g_stocks(p_codart) - p_cantidad;
+    end;
+
     procedure crea_maestro(
       p_pedido in     pedidos_cur%rowtype
     , p_juegos in out juegos_aat
@@ -323,11 +344,10 @@ create or replace package body surte as
       p_juegos(p_idx).partir_ot := 0;
       for j in 1 .. p_juegos(p_idx).piezas.count loop
         l_codart := p_juegos(p_idx).piezas(j).cod_art;
-        p_juegos(p_idx).piezas(j).stock_actual := p_calculo(j).stock_actual;
-        p_juegos(p_idx).piezas(j).saldo_stock := g_stocks(l_codart) - p_calculo(j).cant_final;
-        p_juegos(p_idx).piezas(j).cant_final := p_calculo(j).cant_final;
-        g_stocks(p_juegos(p_idx).piezas(j).cod_art) :=
-              g_stocks(l_codart) - p_juegos(p_idx).piezas(j).cant_final;
+        p_juegos(p_idx).piezas(j).stock_actual := p_calculo(1).detalle(j).stock_actual;
+        p_juegos(p_idx).piezas(j).saldo_stock := get_stock(l_codart) - p_calculo(1).detalle(j).cant_final;
+        p_juegos(p_idx).piezas(j).cant_final := p_calculo(1).detalle(j).cant_final;
+        set_stock(l_codart, p_juegos(p_idx).piezas(j).cant_final);
       end loop;
     end;
 
@@ -336,27 +356,26 @@ create or replace package body surte as
     ) return number is
       l_min number;
     begin
-      l_min := p_calculo(1).cant_final;
+      l_min := p_calculo(1).detalle(1).cant_final;
       for i in 1 .. p_calculo.count loop
-        if p_calculo(i).cant_final < l_min then
-          l_min := p_calculo(i).cant_final;
+        if p_calculo(1).detalle(i).cant_final < l_min then
+          l_min := p_calculo(1).detalle(i).cant_final;
         end if;
       end loop;
       return l_min;
     end;
 
     procedure prueba_partir(
-      p_calculo in out  calculo_aat
-    , p_cant_partir     number
-    , p_es_partible out boolean
+      p_calculo in out calculo_aat
+    , p_cant_partir    number
     ) is
     begin
-      p_es_partible := true;
-      for i in 1 .. p_calculo.count loop
-        if p_cant_partir * p_calculo(i).rendimiento <= p_calculo(i).cant_final then
-          p_calculo(i).cant_final := p_cant_partir * p_calculo(i).rendimiento;
+      p_calculo(1).es_partible := true;
+      for i in 1 .. p_calculo(c_header).detalle.count loop
+        if p_cant_partir * p_calculo(1).detalle(i).rendimiento <= p_calculo(1).detalle(i).cant_final then
+          p_calculo(1).detalle(i).cant_final := p_cant_partir * p_calculo(1).detalle(i).rendimiento;
         else
-          p_es_partible := false;
+          p_calculo(1).es_partible := false;
         end if;
       end loop;
     end;
@@ -369,23 +388,22 @@ create or replace package body surte as
       l_codart           codart_t;
       l_cant_partir      number;
       l_valor_surtir     number;
-      l_es_partible      boolean;
       l_cumple_valor_min boolean;
     begin
       p_juegos(p_idx).tiene_stock_ot := 'NO';
       l_cant_partir := multiplo.inferior(find_min(p_calculo), gc_multiplo_partir);
-      prueba_partir(p_calculo, l_cant_partir, l_es_partible);
+      prueba_partir(p_calculo, l_cant_partir);
       l_valor_surtir := l_cant_partir * p_juegos(p_idx).preuni;
       l_cumple_valor_min := l_valor_surtir >= g_param.valor_partir;
-      if l_es_partible and l_cumple_valor_min then
+      if p_calculo(c_header).es_partible and l_cumple_valor_min then
         p_juegos(p_idx).partir_ot := 1;
         p_juegos(p_idx).cant_partir := l_cant_partir;
         p_juegos(p_idx).valor_surtir := l_valor_surtir;
         for j in 1 .. p_juegos(p_idx).piezas.count loop
           l_codart := p_juegos(p_idx).piezas(j).cod_art;
-          p_juegos(p_idx).piezas(j).stock_actual := p_calculo(j).stock_actual;
-          p_juegos(p_idx).piezas(j).saldo_stock := g_stocks(l_codart) - p_calculo(j).cant_final;
-          p_juegos(p_idx).piezas(j).cant_final := p_calculo(j).cant_final;
+          p_juegos(p_idx).piezas(j).stock_actual := p_calculo(1).detalle(j).stock_actual;
+          p_juegos(p_idx).piezas(j).saldo_stock := g_stocks(l_codart) - p_calculo(1).detalle(j).cant_final;
+          p_juegos(p_idx).piezas(j).cant_final := p_calculo(1).detalle(j).cant_final;
           g_stocks(p_juegos(p_idx).piezas(j).cod_art) :=
                 g_stocks(l_codart) - p_juegos(p_idx).piezas(j).cant_final;
         end loop;
@@ -394,53 +412,73 @@ create or replace package body surte as
       end if;
     end;
 
+    procedure sin_stock(
+      p_idx                  pls_integer
+    , p_calculo              calculo_aat
+    , p_juegos in out nocopy juegos_aat
+    ) is
+      l_codart codart_t;
+    begin
+      p_juegos(p_idx).tiene_stock_ot := 'NO';
+      p_juegos(p_idx).valor_surtir := 0;
+      p_juegos(p_idx).partir_ot := 0;
+      for j in 1 .. p_juegos(p_idx).piezas.count loop
+        l_codart := p_juegos(p_idx).piezas(j).cod_art;
+        p_juegos(p_idx).piezas(j).stock_actual := p_calculo(1).detalle(j).stock_actual;
+        p_juegos(p_idx).piezas(j).saldo_stock := get_stock(l_codart) - p_calculo(1).detalle(j).cant_final;
+        p_juegos(p_idx).piezas(j).cant_final := p_calculo(1).detalle(j).cant_final;
+        p_juegos(p_idx).piezas(j).tiene_stock_itm :=
+            case when p_calculo(1).detalle(j).tiene_stock then 'SI' else 'NO' end;
+        set_stock(l_codart, p_juegos(p_idx).piezas(j).cant_final);
+      end loop;
+    end;
+
+    function calculo(
+      p_piezas piezas_aat
+    ) return calculo_aat is
+      l_calculo      calculo_aat;
+      l_stock_actual number := 0;
+    begin
+      for i in 1 .. p_piezas.count loop
+        l_stock_actual := get_stock(p_piezas(i).cod_art);
+        l_calculo(c_header).detalle(i).stock_actual := l_stock_actual;
+        l_calculo(c_header).detalle(i).rendimiento := p_piezas(i).rendimiento;
+        l_calculo(c_header).detalle(i).tiene_stock := l_stock_actual >= p_piezas(i).cantidad;
+
+        if l_calculo(c_header).detalle(i).tiene_stock then
+          l_calculo(c_header).detalle(i).cant_final := p_piezas(i).cantidad;
+        else
+          l_calculo(c_header).tiene_stock_ot := false;
+          -- busca partir la orden
+          if l_stock_actual > 0 then
+            l_calculo(c_header).detalle(i).cant_final := l_stock_actual;
+          else
+            l_calculo(c_header).puede_partirse := false;
+            l_calculo(c_header).detalle(i).cant_final := 0;
+          end if;
+        end if;
+      end loop;
+
+      return l_calculo;
+    end;
+
     -- por todos los items de pedidos, consume el stock
     -- progresivamente en el orden dado
     procedure consume_stock(
       p_juegos in out nocopy juegos_aat
     ) is
-      l_calculo         calculo_aat;
-      l_stock_actual    number  := 0;
-      l_tiene_stock_ot  boolean := true;
-      l_tiene_stock_itm boolean := true;
-      l_puede_partirse  boolean := true;
+      l_calculo calculo_aat;
     begin
       for i in 1 .. p_juegos.count loop
-        l_tiene_stock_ot := true;
-        l_puede_partirse := true;
-        l_calculo.delete();
-
-        for j in 1 .. p_juegos(i).piezas.count loop
-          l_stock_actual := g_stocks(p_juegos(i).piezas(j).cod_art);
-          l_calculo(j).stock_actual := l_stock_actual;
-          l_calculo(j).rendimiento := p_juegos(i).piezas(j).rendimiento;
-          l_tiene_stock_itm := l_stock_actual >= p_juegos(i).piezas(j).cantidad;
-
-          if l_tiene_stock_itm then
-            l_calculo(j).cant_final := p_juegos(i).piezas(j).cantidad;
-          else
-            l_tiene_stock_ot := false;
-            -- busca partir la orden
-            if l_stock_actual > 0 then
-              l_calculo(j).cant_final := l_stock_actual;
-            else
-              l_puede_partirse := false;
-              l_calculo(j).cant_final := 0;
-            end if;
-          end if;
-
-          p_juegos(i).piezas(j).stock_actual := l_stock_actual;
-          p_juegos(i).piezas(j).tiene_stock_itm := case when l_tiene_stock_itm then 'SI' else 'NO' end;
-        end loop;
-
+        l_calculo := calculo(p_juegos(i).piezas);
+        -- tomo una decision al saber el stock que hay en las piezas de un juego
         case
-          when l_tiene_stock_ot then
+          when l_calculo(c_header).tiene_stock_ot then
             actualiza_saldo(i, l_calculo, p_juegos);
-          when l_puede_partirse then
+          when l_calculo(c_header).puede_partirse then
             parte_orden(i, l_calculo, p_juegos);
           else
-            p_juegos(i).tiene_stock_ot := 'NO';
-            p_juegos(i).partir_ot := 0;
+            sin_stock(i, l_calculo, p_juegos);
         end case;
       end loop;
     end;
