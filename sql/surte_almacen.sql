@@ -1055,9 +1055,6 @@ select *
  where tiene_stock_ot = 'NO'
     or partir_ot = 0;
 
-
-
-
 select *
   from all_arguments
  where package_name = 'SURTE';
