@@ -7,7 +7,7 @@ create or replace package surte_formula as
   type formulas_aat is table of formula_rt index by pls_integer;
 
   type master_rt is record (
-    cod_art pcmasters.cod_art%type,
+    cod_art  pcmasters.cod_art%type,
     formulas formulas_aat
   );
 
@@ -18,4 +18,9 @@ create or replace package surte_formula as
   function explosion(
     p_codart articul.cod_art%type
   ) return master_aat;
+
+  function formula(
+    p_explosion master_aat
+  , p_codart    articul.cod_art%type
+  ) return formulas_aat;
 end surte_formula;

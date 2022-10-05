@@ -25,6 +25,7 @@ create global temporary table pevisa.tmp_surte_jgo (
   cant_partir     number(16, 4),
   tiene_stock_ot  varchar2(2),
   es_prioritario  number(1),
+  id_color        varchar2(1),
   ranking         number(10)
 )
   on commit preserve rows;

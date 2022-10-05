@@ -102,7 +102,7 @@ select d.cod_cliente, d.nombre, d.fch_pedido, d.pedido, d.pedido_item, d.numero,
          when 0 then 'NO'
          else 'SI'
        end as tiene_stock_ot
-     , case d.tiene_stock when 0 then 'NO' else 'SI' end as tiene_stock_item
-     , d.impreso, d.fch_impresion, d.es_juego, d.es_importado, d.es_prioritario
+     , d.tiene_stock as tiene_stock_item, d.impreso, d.fch_impresion, d.es_juego, d.es_importado
+     , d.es_prioritario
   from detalle d
  order by nuot_serie, nuot_tipoot_codigo, numero;

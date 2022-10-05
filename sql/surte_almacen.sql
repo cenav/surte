@@ -803,6 +803,8 @@ select * from param_surte;
         , case when v.valor > p.valor_item then 1 else 0 end desc
         , v.es_juego
         , v.valor desc
+        ,v.pedido
+        ,v.pedido_item
       ) as ranking
       from vw_ordenes_pedido_pendiente v
            join param_surte p on p.id_param = 1
@@ -815,6 +817,8 @@ select * from param_surte;
               not exists(select * from tmp_selecciona_cliente)))
        )
        and v.impreso = 'NO'
+--        and pedido = 14660
+--        and pedido_item = 135
     )
 select *
   from detalle
@@ -1038,6 +1042,8 @@ select *
   from logger_logs
  order by id desc;
 
+select sysdate from dual;
+
 select * from vw_surte_sao;
 
 select * from color_surtimiento;
@@ -1045,10 +1051,6 @@ select * from color_surtimiento;
 select *
   from pcformulas
  where cod_art = 'SA 3540MX3-1';
-
-begin
-  surte.por_item();
-end;
 
 select *
   from tmp_surte_jgo
@@ -1058,3 +1060,71 @@ select *
 select *
   from all_arguments
  where package_name = 'SURTE';
+
+select * from color_surtimiento order by peso;
+
+select * from vw_surte_jgo;
+
+select * from tmp_surte_pza;
+
+begin
+  surte.por_item();
+end;
+
+select *
+  from vw_surte_jgo
+ order by ranking;
+
+
+select nvl(sum(valor_surtir), 0) as color, count(*)
+  from vw_surte_jgo
+ where id_color in ('B', 'C');
+
+select nvl(sum(valor_surtir), 0) as color, count(*)
+  from vw_surte_jgo
+ where tiene_stock_ot = 'SI' or se_puede_partir = 'SI'
+   and id_color in ('B', 'C');
+
+select *
+  from vw_surte_jgo
+ where tiene_stock_ot = 'SI' or se_puede_partir = 'SI'
+   and id_color not in ('B', 'C');
+
+select *
+  from expedido_d
+ where numero = 14777
+   and nro = 10;
+
+select *
+  from vw_ordenes_pedido_pendiente
+ where pedido = 14660
+   and pedido_item = 19;
+
+select * from param_surte;
+
+select *
+  from vw_surte_jgo
+ where nro_pedido = 14660
+   and itm_pedido = 135;
+
+select dsc_color, id_color from color_surtimiento order by peso;
+
+select *
+  from vw_surte_jgo
+ where dsc_grupo is not null;
+
+
+((:busca.stock = 1 and (tiene_stock_ot = 'SI' or se_puede_partir = 'SI')) or (:busca.stock = 2 and tiene_stock_ot = 'SI') or
+  (:busca.stock = 3 and se_puede_partir = 'SI') or
+  (:busca.stock = 9
+  )
+  )
+and
+(cod_cliente = :busca.cliente or :busca.cliente is null
+  )
+and
+(id_color = :busca.colores or :busca.colores is null
+  )
+and
+(: global.prioritario = 1 or (: global.prioritario = 0 and es_prioritario != 'SI')
+  )

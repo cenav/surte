@@ -45,7 +45,7 @@ declare
   ) is
     l_idx pls_integer;
   begin
-    p_details.extend;
+    p_details.extend();
     l_idx := p_details.last;
     p_details(l_idx) := p_detail;
   end;
@@ -68,7 +68,7 @@ declare
   ) is
     l_idx pls_integer;
   begin
-    p_headers.extend;
+    p_headers.extend();
     l_idx := p_headers.last;
     p_headers(l_idx) := p_header;
   end;

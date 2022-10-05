@@ -11,12 +11,13 @@ create global temporary table pevisa.tmp_surte_sao (
   cantidad        number(12, 4),
   rendimiento     number(12, 4),
   stock_inicial   number(12, 4),
+  stock_actual    number(12, 4),
   saldo_stock     number(12, 4),
   sobrante        number(12, 4),
   faltante        number(12, 4),
   cant_final      number(12, 4),
   es_importado    number(1),
-  tiene_stock_itm varchar2(2),
+  tiene_stock_itm number(1),
   id_color        varchar2(1)
 )
   on commit preserve rows;
