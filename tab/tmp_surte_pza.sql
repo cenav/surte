@@ -19,6 +19,8 @@ create global temporary table pevisa.tmp_surte_pza (
   es_importado    number(1),
   tiene_stock_itm number(1),
   es_sao          number(1),
+  es_armado       number(1),
+  es_reserva      number(1),
   id_color        varchar2(1)
 )
   on commit preserve rows;

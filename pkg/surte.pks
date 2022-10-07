@@ -11,19 +11,6 @@ create or replace package surte as
   , p_empaque  varchar2 default null
   );
 
-  procedure parte_ot(
-    p_tipo        pr_ot.nuot_tipoot_codigo%type
-  , p_serie       pr_ot.nuot_serie%type
-  , p_numero      pr_ot.numero%type
-  , p_cant_partir pr_ot.cant_prog%type
-  );
-
-  procedure parte_ot_masivo;
-
-  procedure parte_ot_masivo(
-    p_prioritario pls_integer
-  );
-
   function total_imprimir return number;
 
   function total_impreso return number;
