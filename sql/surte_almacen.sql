@@ -819,10 +819,16 @@ select * from param_surte;
        and v.impreso = 'NO'
 --        and pedido = 14660
 --        and pedido_item = 135
+       and exists(
+         select *
+           from pedidos_test t
+          where v.pedido = t.numero
+            and v.pedido_item = t.item
+       )
     )
 select *
   from detalle
- order by ranking;
+ order by ranking, oa;
 
 select * from vw_surte_item;
 
@@ -1075,7 +1081,6 @@ select *
   from vw_surte_jgo
  order by ranking;
 
-
 select nvl(sum(valor_surtir), 0) as color, count(*)
   from vw_surte_jgo
  where id_color in ('B', 'C');
@@ -1101,3 +1106,5 @@ select *
    and itm_pedido = 135;
 
 select dsc_color, id_color from color_surtimiento order by peso;
+
+select ut3.ut.version() from dual;
