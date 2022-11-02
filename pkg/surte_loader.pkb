@@ -1,20 +1,50 @@
 create or replace package body surte_loader as
 
-  cursor pedidos_cur(p_pais varchar2, p_vendedor varchar2, p_dias pls_integer, p_empaque varchar2) is
+  cursor pedidos_cur(
+    p_pais varchar2
+    , p_vendedor varchar2
+    , p_dias pls_integer
+    , p_empaque varchar2
+    , p_es_juego pls_integer
+    , p_orden pls_integer
+    ) is
     -- pedidos de clientes ordenados primero por juegos, luego de mayor a menor valor
       with detalle as (
         select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
              , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
              , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
              , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
-             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao
+             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
+             , v.es_reservado, v.es_simulacion
              , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
              , dense_rank() over (
-          order by case when p.prioritario = 1 then v.es_prioritario end desc
---             , case when trunc(sysdate) - v.fch_pedido > p_dias then 1 else 0 end desc --> 25/08/22 solo filtre mayores a fecha
-            , case when v.valor > p.valor_item then 1 else 0 end desc
-            , v.es_juego
-            , v.valor desc
+          order by
+            v.es_reservado desc
+            , case when p.prioritario = 1 then v.es_prioritario end desc
+            , case when p.prioritario = 1 then v.orden_prioritario end
+--         , case when trunc(sysdate) - v.fch_pedido > :p_dias then 1 else 0 end desc
+            , case p_orden
+                when 1 then
+                  case when v.valor > p.valor_item then 1 else 0 end
+              end desc
+            , case p_orden
+                when 1 then
+                  v.es_juego
+              end
+            , case p_orden
+                when 1 then
+                  v.valor
+                when 2 then
+                  v.total_art
+              end desc
+            , case p_orden
+                when 1 then
+                  v.es_juego
+              end
+            , case p_orden
+                when 2 then
+                  v.fch_pedido
+              end
             , v.pedido
             , v.pedido_item
           ) as ranking
@@ -25,18 +55,16 @@ create or replace package body surte_loader as
              and (v.vendedor = p_vendedor or p_vendedor is null)
              and (v.empaque = p_empaque or p_empaque is null)
              and (trunc(sysdate) - v.fch_pedido > p_dias or p_dias is null)
+             and (v.es_juego = p_es_juego or p_es_juego is null)
              and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-                  not exists(select * from tmp_selecciona_cliente)))
+                  not exists(select * from tmp_selecciona_cliente))
+             and (exists(select * from tmp_selecciona_articulo t where v.formu_art_cod_art = t.cod_art) or
+                  not exists(select * from tmp_selecciona_articulo))
+                  )
            )
            and v.impreso = 'NO'
 --            and pedido = 14660
 --            and pedido_item = 135
---            and exists(
---              select *
---                from pedidos_test t
---               where v.pedido = t.numero
---                 and v.pedido_item = t.item
---            )
         )
     select *
       from detalle d
@@ -53,6 +81,7 @@ create or replace package body surte_loader as
     p_juegos(p_pedido.ranking).nro_pedido := p_pedido.pedido;
     p_juegos(p_pedido.ranking).itm_pedido := p_pedido.pedido_item;
     p_juegos(p_pedido.ranking).fch_pedido := p_pedido.fch_pedido;
+    p_juegos(p_pedido.ranking).cant_prog := p_pedido.cant_prog;
     p_juegos(p_pedido.ranking).preuni := p_pedido.preuni;
     p_juegos(p_pedido.ranking).valor := p_pedido.valor;
     p_juegos(p_pedido.ranking).ot_tipo := p_pedido.nuot_tipoot_codigo;
@@ -66,7 +95,10 @@ create or replace package body surte_loader as
     p_juegos(p_pedido.ranking).fch_impresion := p_pedido.fch_impresion;
     p_juegos(p_pedido.ranking).tiene_stock_ot := 'NO';
     p_juegos(p_pedido.ranking).es_prioritario := p_pedido.es_prioritario;
-    p_juegos(p_pedido.ranking).valor_surtir := 0;
+    p_juegos(p_pedido.ranking).es_reserva := p_pedido.es_reservado;
+    p_juegos(p_pedido.ranking).es_simulacion := p_pedido.es_simulacion;
+    p_juegos(p_pedido.ranking).valor_surtir := null;
+    p_juegos(p_pedido.ranking).valor_simulado := null;
     p_juegos(p_pedido.ranking).partir_ot := 0;
     p_juegos(p_pedido.ranking).id_color := null;
   end;
@@ -97,10 +129,12 @@ create or replace package body surte_loader as
   , p_vendedor varchar2 default null
   , p_dias     pls_integer default null
   , p_empaque  varchar2 default null
+  , p_es_juego pls_integer default null
+  , p_orden    pls_integer default 1
   ) return surte_struct.juegos_aat is
     l_juegos surte_struct.juegos_aat;
   begin
-    for r_pedido in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque) loop
+    for r_pedido in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden) loop
       -- para el primer quiebre de grupo (item pedido)
       -- normaliza la data
       if r_pedido.oa is not null then

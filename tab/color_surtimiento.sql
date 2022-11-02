@@ -34,11 +34,14 @@ alter table pevisa.color_surtimiento
 grant delete, insert, select, update on pevisa.color_surtimiento to sig_roles_invitado;
 
 
-insert into color_surtimiento values ('B', 'COMPLETO', 'BLUE', 5, 1, 7);
-insert into color_surtimiento values ('Y', 'ARMAR', 'YELLOW', 6, 1, 4);
-insert into color_surtimiento values ('C', 'PARTIR', 'CYAN', 8, 2, 6);
-insert into color_surtimiento values ('R', 'FALTANTE', 'RED', 3, 3, 1);
-insert into color_surtimiento values ('M', 'IMPORTADO', 'MAGENTA', 7, 4, 2);
-insert into color_surtimiento values ('G', 'DESARROLLO', 'GREEN', 4, 5, 3);
-insert into color_surtimiento values ('L', 'RESERVA', 'BLACK', 4, 5, 5);
+insert into color_surtimiento values ('C', 'COMPLETO', 'BLUE', 5, 1, 7);
+insert into color_surtimiento values ('A', 'ARMAR', 'YELLOW', 6, 1, 4);
+insert into color_surtimiento values ('P', 'PARTIR', 'BLUE', 8, 2, 6);
+insert into color_surtimiento values ('F', 'FALTANTE', 'RED', 3, 3, 1);
+insert into color_surtimiento values ('I', 'IMPORTADO', 'MAGENTA', 7, 4, 2);
+insert into color_surtimiento values ('D', 'DESARROLLO', 'GREEN', 4, 5, 3);
+insert into color_surtimiento values ('R', 'RESERVA', 'BLACK', 4, 5, 5);
 commit;
+
+
+select * from color_surtimiento order by peso;

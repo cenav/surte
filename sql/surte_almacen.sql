@@ -675,7 +675,7 @@ select *
    and nuot_serie = '3'
    and numero = 785221;
 
-call surte.parte_ot(p_tipo => 'AR', p_serie => '3', p_numero => 785207, p_cant_partir => 4000);
+call surte_parte.parte_ot(p_tipo => 'AR', p_serie => '3', p_numero => 785207, p_cant_partir => 4000);
 
 select *
   from pr_ot_det
@@ -1073,10 +1073,6 @@ select * from vw_surte_jgo;
 
 select * from tmp_surte_pza;
 
-begin
-  surte.por_item();
-end;
-
 select *
   from vw_surte_jgo
  order by ranking;
@@ -1107,4 +1103,204 @@ select *
 
 select dsc_color, id_color from color_surtimiento order by peso;
 
-select ut3.ut.version() from dual;
+
+
+-- (id_estado = :busca.estado or :busca.estado is null) and
+-- (ot_nro = :busca.ot_nro or :busca.ot_nro is null) and
+-- (usuario = user or :global.supermaestro = 'SI') and
+-- (TRUNC(fch_solicitud) between :busca.fecha_del and :busca.fecha_al) and
+-- (ot_tpo in (select c.ot_tipo from tipo_cambio_ot c where c.id_tipo = :global.tipo))
+
+select * from solicita_cambio_ot;
+
+select * from solicita_cambio_ot_det;
+
+select * from motivo_cambio_ot;
+
+select * from estado_cambio_ot;
+
+select * from vw_solicita_cambio_ot;
+
+select * from kardex_g;
+
+select * from tmp_surte_jgo;
+
+select * from tmp_surte_pza;
+
+begin
+  surte.por_item();
+end;
+
+select *
+  from vw_ordenes_pedido_pendiente
+ where art_cod_art = '290.3087';
+
+  with saos as (
+    select f.cod_for
+      from vw_formula_saos f
+     group by f.cod_for
+    )
+select a.cod_for, nvl(s.stock, 0) as stock
+  from saos a
+       left join vw_stock_almacen s on a.cod_for = s.cod_art
+ where a.cod_for = '290.3087';
+
+select f.cod_for
+  from vw_formula_saos f
+ where f.cod_for = '290.3087';
+
+select *
+  from vw_stock_almacen
+ where cod_art = '290.3087';
+
+select * from grupo_cliente;
+
+select * from grupo_cliente_cliente;
+
+select 'COMPLETO' as dsc, 'C' as id from dual union select 'PARTIR' as dsc, 'P' as id from dual;
+
+
+select 'RESERVA' as dsc, 'P' as id
+  from dual
+ union
+select 'FALTANTE' as dsc, 'F' as id
+  from dual
+ union
+select 'URGENTE' as dsc, 'U' as id
+  from dual;
+
+select *
+  from exclientes
+ where abreviada = 'OEGER';
+
+-- ((:busca.stock = 1 and (tiene_stock_ot = 'SI' or se_puede_partir = 'SI')) or
+--   (:busca.stock = 2 and tiene_stock_ot = 'SI') or
+--   (:busca.stock = 3 and se_puede_partir = 'SI') or
+--   (:busca.stock = 9)) and
+-- (cod_cliente = :busca.cliente or :busca.cliente is null) and
+-- (id_color = :busca.colores or :busca.colores is null) and
+-- (:global.prioritario = 1 or (:global.prioritario = 0 and es_prioritario != 'SI'))
+--
+
+select * from param_surte;
+
+select * from reserva_surtimiento;
+
+select *
+  from reserva_surtimiento
+ where pedido_nro = 15080
+   and pedido_itm = 51;
+
+select *
+  from vw_ordenes_pedido_pendiente
+ where es_reservado = 1;
+
+  with detalle as (
+    select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
+         , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
+         , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
+         , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
+         , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
+         , v.es_reservado, v.es_simulacion
+         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
+         , dense_rank() over (
+      order by
+        v.es_reservado desc
+        , case when p.prioritario = 1 then v.es_prioritario end desc
+        , case when p.prioritario = 1 then v.orden_prioritario end
+--         , case when trunc(sysdate) - v.fch_pedido > :p_dias then 1 else 0 end desc
+        , case :p_orden
+            when 1 then
+              case when v.valor > p.valor_item then 1 else 0 end
+          end desc
+        , case :p_orden
+            when 1 then
+              v.es_juego
+          end
+        , case :p_orden
+            when 1 then
+              v.valor
+            when 2 then
+              v.total_art
+          end desc
+        , case :p_orden
+            when 1 then
+              v.es_juego
+          end
+        , case :p_orden
+            when 2 then
+              v.fch_pedido
+          end
+        , v.pedido
+        , v.pedido_item
+      ) as ranking
+      from vw_ordenes_pedido_pendiente v
+           join param_surte p on p.id_param = 1
+     where (v.es_prioritario = 1
+       or ((v.pais = :p_pais or :p_pais is null)
+         and (v.vendedor = :p_vendedor or :p_vendedor is null)
+         and (v.empaque = :p_empaque or :p_empaque is null)
+         and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
+         and (v.es_juego = :p_es_juego or :p_es_juego is null)
+         and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
+              not exists(select * from tmp_selecciona_cliente))
+         and (exists(select * from tmp_selecciona_articulo t where v.formu_art_cod_art = t.cod_art) or
+              not exists(select * from tmp_selecciona_articulo))
+              )
+       )
+       and v.impreso = 'NO'
+--            and pedido = 14660
+--            and pedido_item = 135
+    )
+select *
+  from detalle d
+ order by ranking, oa;
+
+select *
+  from vw_surte_jgo
+ order by ranking;
+
+select * from tmp_surte_jgo;
+
+select j.id_color, j.ranking, j.nom_cliente, j.nro_pedido, j.itm_pedido, j.cod_jgo
+     , p.id_color, p.cod_pza, p.cantidad, j.es_urgente
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+ where j.cod_cliente in ('G002')
+   and j.id_color in ('R', 'F')
+   and p.id_color = 'F'
+ order by ranking;
+
+select j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, sum(p.cantidad) as cantidad
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+       join vw_articulo a on p.cod_pza = a.cod_art
+ where j.cod_cliente = 'G002'
+   and j.id_color in ('R', 'F')
+   and p.id_color = 'F'
+ group by j.nom_cliente, p.cod_pza, a.dsc_grupo, a.cod_lin
+ order by 2;
+
+-- importados
+select j.id_color, j.ranking, j.nom_cliente, j.nro_pedido, j.itm_pedido, j.cod_jgo
+     , p.id_color, p.cod_pza, p.cantidad, j.es_urgente
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+ where j.cod_cliente in ('G002')
+   and j.id_color in ('I')
+   and p.id_color = 'I'
+ order by ranking;
+
+select j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, sum(p.cantidad) as cantidad
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+       join vw_articulo a on p.cod_pza = a.cod_art
+ where j.cod_cliente = 'G002'
+   and j.id_color in ('I')
+   and p.id_color = 'I'
+ group by j.nom_cliente, p.cod_pza, a.dsc_grupo, a.cod_lin
+ order by 2;
+
+select * from grupo_cliente;
+
+select * from grupo_cliente_cliente;

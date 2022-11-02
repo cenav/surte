@@ -263,7 +263,7 @@ create or replace package body surte_parte as
     for r in (
       select *
         from vw_surte_jgo j
-       where j.se_puede_partir = 'SI'
+       where j.id_color = surte_color.gc_partir
          and exists(
            select 1
              from tmp_imprime_ot t

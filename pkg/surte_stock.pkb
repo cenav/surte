@@ -39,9 +39,9 @@ create or replace package body surte_stock as
               from vw_formula_saos f
              group by f.cod_for
             )
-        select a.cod_for, s.stock
+        select a.cod_for, nvl(s.stock, 0) as stock
           from saos a
-               join vw_stock_almacen s on a.cod_for = s.cod_art
+               left join vw_stock_almacen s on a.cod_for = s.cod_art
         )
       loop
         p_stocks(r.cod_for).stock_inicial := r.stock;
@@ -77,5 +77,7 @@ create or replace package body surte_stock as
   ) is
   begin
     p_stocks(p_codart).stock_actual := p_stocks(p_codart).stock_actual - p_cantidad;
+  exception
+    when no_data_found then raise_application_error(-20001, 'no encuentra stock ' || p_codart);
   end;
 end surte_stock;

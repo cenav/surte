@@ -14,9 +14,11 @@ create global temporary table pevisa.tmp_surte_jgo (
   ot_numero       number(8),
   ot_estado       varchar2(2),
   cod_jgo         varchar2(30),
+  cant_prog       number(10, 2),
   preuni          number(10, 2),
   valor           number(10, 2),
   valor_surtir    number(10, 2),
+  valor_simulado  number(10, 2),
   es_juego        number(1),
   tiene_importado number(1),
   impreso         varchar2(2),
@@ -26,6 +28,8 @@ create global temporary table pevisa.tmp_surte_jgo (
   tiene_stock_ot  varchar2(2),
   es_prioritario  number(1),
   es_reserva      number(1),
+  es_urgente      number(1),
+  es_simulacion   number(1),
   id_color        varchar2(1),
   ranking         number(10)
 )
@@ -39,6 +43,5 @@ alter table pevisa.tmp_surte_jgo
       primary key (nro_pedido, itm_pedido)
         enable validate
     );
-
 
 grant delete, insert, select, update on pevisa.tmp_surte_jgo to sig_roles_invitado;

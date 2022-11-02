@@ -1,4 +1,5 @@
 create or replace package surte_struct as
+
   type calc_detail_rt is record (
     stock_actual number,
     rendimiento  number,
@@ -9,14 +10,14 @@ create or replace package surte_struct as
   );
 
   type calc_header_rt is record (
-    stock_completo   boolean := true,
-    podria_partirse  boolean := true,
-    es_partible      boolean := true,
-    tiene_stock_ot   boolean := true,
-    armar            boolean := true,
-    falta_importado  boolean := false,
-    min_cant_partir  number := surte_util.gc_infinito,
-    piezas_sin_stock number := 0,
+    stock_completo   boolean default true,
+    podria_partirse  boolean default false,
+    reserva_stock    boolean default false,
+    falta_importado  boolean default false,
+    armar            boolean default false,
+    urgente          boolean default false,
+    min_cant_partir  number default surte_util.gc_infinito,
+    piezas_sin_stock number default 0,
     peso             number
   );
 
@@ -76,9 +77,11 @@ create or replace package surte_struct as
     formu_art       tmp_surte_jgo.cod_jgo%type,
     es_juego        tmp_surte_jgo.es_juego%type,
     tiene_importado tmp_surte_jgo.tiene_importado%type,
+    cant_prog       tmp_surte_jgo.cant_prog%type,
     preuni          tmp_surte_jgo.preuni%type,
     valor           tmp_surte_jgo.valor%type,
     valor_surtir    tmp_surte_jgo.valor_surtir%type,
+    valor_simulado  tmp_surte_jgo.valor_simulado%type,
     impreso         tmp_surte_jgo.impreso%type,
     fch_impresion   tmp_surte_jgo.fch_impresion%type,
     partir_ot       tmp_surte_jgo.partir_ot%type,
@@ -86,6 +89,7 @@ create or replace package surte_struct as
     tiene_stock_ot  tmp_surte_jgo.tiene_stock_ot%type,
     es_prioritario  tmp_surte_jgo.es_prioritario%type,
     es_reserva      tmp_surte_jgo.es_reserva%type,
+    es_simulacion   tmp_surte_jgo.es_simulacion%type,
     id_color        tmp_surte_jgo.id_color%type,
     calculo         calc_header_rt,
     piezas          piezas_aat
@@ -96,4 +100,5 @@ create or replace package surte_struct as
   type tmp_jgo_aat is table of tmp_surte_jgo%rowtype index by pls_integer;
   type tmp_pza_aat is table of tmp_surte_pza%rowtype index by pls_integer;
   type tmp_sao_aat is table of tmp_surte_sao%rowtype index by pls_integer;
+
 end surte_struct;
