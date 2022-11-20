@@ -30,6 +30,8 @@ create global temporary table pevisa.tmp_surte_jgo (
   es_reserva      number(1),
   es_urgente      number(1),
   es_simulacion   number(1),
+  es_armar        number(1),
+  cant_faltante   number(8),
   id_color        varchar2(1),
   ranking         number(10)
 )

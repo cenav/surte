@@ -45,7 +45,6 @@ create or replace package body surte_scanner as
     if multiplo.inferior(p_stock_armar, surte_util.gc_multiplo_partir) = 0 or
        p_calc.min_cant_partir * p_precio_unit < p_min_val_partir
     then
---       p_calc.podria_partirse := false;
       p_calc.armar := false;
     end if;
   end;

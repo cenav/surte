@@ -202,6 +202,7 @@ create or replace package body surte_parte as
     begin
       l_old := g_ot;
       l_old.cant_prog := p_cant_parte;
+      l_old.saldo_pk := p_cant_parte;
       api_pr_ot.upd(l_old);
     end;
 

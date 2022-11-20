@@ -65,8 +65,10 @@ create or replace package body surte as
       l_stock_actual number := 0;
     begin
       p_juego.tiene_stock_ot := 'SI';
-      p_juego.valor_surtir := case p_juego.es_simulacion when surte_util.gc_false then p_juego.valor end;
-      p_juego.valor_simulado := case p_juego.es_simulacion when surte_util.gc_true then p_juego.valor end;
+      p_juego.valor_surtir :=
+          case p_juego.es_simulacion when surte_util.gc_false then p_juego.valor end;
+      p_juego.valor_simulado :=
+          case p_juego.es_simulacion when surte_util.gc_true then p_juego.valor end;
       p_juego.partir_ot := surte_util.gc_false;
       p_juego.id_color := surte_color.gc_completo;
       for j in 1 .. p_juego.piezas.count loop
@@ -92,7 +94,8 @@ create or replace package body surte as
           l_codart := p_juego.piezas(j).saos(k).cod_sao;
           l_stock_actual := surte_stock.actual(l_codart, g_stocks);
           p_juego.piezas(j).saos(k).stock_actual := l_stock_actual;
-          p_juego.piezas(j).saos(k).saldo_stock := l_stock_actual - p_juego.piezas(j).saos(k).cantidad;
+          p_juego.piezas(j).saos(k).saldo_stock := l_stock_actual -
+                                                   p_juego.piezas(j).saos(k).cantidad;
           p_juego.piezas(j).saos(k).cant_final := p_juego.piezas(j).saos(k).cantidad;
           p_juego.piezas(j).saos(k).tiene_stock_itm :=
               case when l_stock_actual >= p_juego.piezas(j).saos(k).cantidad then 1 else 0 end;
@@ -172,7 +175,8 @@ create or replace package body surte as
         l_codart := p_juego.piezas(j).cod_art;
         l_stock_actual := surte_stock.actual(l_codart, g_stocks);
         p_juego.piezas(j).stock_actual := l_stock_actual;
-        p_juego.piezas(j).cant_final := p_juego.calculo.min_cant_partir * p_juego.piezas(j).rendimiento;
+        p_juego.piezas(j).cant_final :=
+              p_juego.calculo.min_cant_partir * p_juego.piezas(j).rendimiento;
         if p_juego.piezas(j).es_sao = 0 or
            (p_juego.piezas(j).es_sao = 1 and l_stock_actual >= p_juego.piezas(j).cant_final)
         then
@@ -181,6 +185,7 @@ create or replace package body surte as
           surte_stock.reduce(l_codart, p_juego.piezas(j).cant_final, g_stocks);
 --           l_marca := 'NO';
           p_juego.piezas(j).saos.delete();
+          p_juego.piezas(j).calculo.armar := false; -- refactorizar deberia estar en scanner
         else
           p_juego.piezas(j).id_color := surte_color.gc_armar;
 --           l_marca := 'SI';
@@ -195,7 +200,8 @@ create or replace package body surte as
           p_juego.piezas(j).saos(k).saldo_stock := l_stock_actual -
                                                    p_juego.piezas(j).saos(k).cant_final;
           p_juego.piezas(j).saos(k).id_color := surte_color.gc_completo;
-          surte_stock.reduce(p_juego.piezas(j).saos(k).cod_sao, p_juego.piezas(j).saos(k).cant_final,
+          surte_stock.reduce(p_juego.piezas(j).saos(k).cod_sao,
+                             p_juego.piezas(j).saos(k).cant_final,
                              g_stocks);
         end loop;
 --         end if;
@@ -282,7 +288,8 @@ create or replace package body surte as
         elsif l_stock_actual >= p_juego.piezas(j).cantidad then
           p_juego.piezas(j).tiene_stock_itm := surte_util.gc_true;
           p_juego.piezas(j).id_color := surte_color.gc_completo;
-        elsif l_stock_actual < p_juego.piezas(j).cantidad and p_juego.piezas(j).es_importado = 1 then
+        elsif l_stock_actual < p_juego.piezas(j).cantidad and
+              p_juego.piezas(j).es_importado = 1 then
           p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
           p_juego.piezas(j).id_color := surte_color.gc_importado;
         else
@@ -303,6 +310,17 @@ create or replace package body surte as
             p_juego.piezas(j).saos(k).id_color := surte_color.gc_faltante;
           end if;
         end loop;
+      end loop;
+    end;
+
+    procedure marca_es_armar(
+      p_juego in out nocopy surte_struct.juego_rt
+    ) is
+    begin
+      for j in 1 .. p_juego.piezas.count loop
+        if p_juego.piezas(j).id_color = surte_color.gc_armar then
+          p_juego.calculo.armar := true;
+        end if;
       end loop;
     end;
 
@@ -332,6 +350,7 @@ create or replace package body surte as
           else
             falta_stock(p_juegos(i));
         end case;
+        marca_es_armar(p_juegos(i)); -- mejorar la formar como se marca lo por armar
       end loop;
     end;
 
@@ -371,8 +390,12 @@ create or replace package body surte as
         p_juegos_tmp(p_juegos_tmp.count).tiene_stock_ot := p_juegos(i).tiene_stock_ot;
         p_juegos_tmp(p_juegos_tmp.count).es_prioritario := p_juegos(i).es_prioritario;
         p_juegos_tmp(p_juegos_tmp.count).es_reserva := p_juegos(i).es_reserva;
-        p_juegos_tmp(p_juegos_tmp.count).es_urgente := surte_util.bool_to_logic(p_juegos(i).calculo.urgente);
+        p_juegos_tmp(p_juegos_tmp.count).es_urgente :=
+            surte_util.bool_to_logic(p_juegos(i).calculo.urgente);
         p_juegos_tmp(p_juegos_tmp.count).es_simulacion := p_juegos(i).es_simulacion;
+        p_juegos_tmp(p_juegos_tmp.count).es_armar :=
+            surte_util.bool_to_logic(p_juegos(i).calculo.armar);
+        p_juegos_tmp(p_juegos_tmp.count).cant_faltante := p_juegos(i).calculo.piezas_sin_stock;
         p_juegos_tmp(p_juegos_tmp.count).id_color := p_juegos(i).id_color;
 
         for j in 1 .. p_juegos(i).piezas.count loop
@@ -392,7 +415,8 @@ create or replace package body surte as
           p_piezas_tmp(p_piezas_tmp.count).es_importado := p_juegos(i).piezas(j).es_importado;
           p_piezas_tmp(p_piezas_tmp.count).tiene_stock_itm := p_juegos(i).piezas(j).tiene_stock_itm;
           p_piezas_tmp(p_piezas_tmp.count).es_sao := p_juegos(i).piezas(j).es_sao;
-          p_piezas_tmp(p_piezas_tmp.count).es_armado := p_juegos(i).piezas(j).es_armado;
+          p_piezas_tmp(p_piezas_tmp.count).es_armado :=
+              surte_util.bool_to_logic(p_juegos(i).piezas(j).calculo.armar);
           p_piezas_tmp(p_piezas_tmp.count).es_reserva := p_juegos(i).piezas(j).es_reserva;
           p_piezas_tmp(p_piezas_tmp.count).id_color := p_juegos(i).piezas(j).id_color;
 
@@ -404,14 +428,16 @@ create or replace package body surte as
             p_saos_tmp(p_saos_tmp.count).cod_sao := p_juegos(i).piezas(j).saos(k).cod_sao;
             p_saos_tmp(p_saos_tmp.count).cantidad := p_juegos(i).piezas(j).saos(k).cantidad;
             p_saos_tmp(p_saos_tmp.count).rendimiento := p_juegos(i).piezas(j).saos(k).rendimiento;
-            p_saos_tmp(p_saos_tmp.count).stock_inicial := p_juegos(i).piezas(j).saos(k).stock_inicial;
+            p_saos_tmp(p_saos_tmp.count).stock_inicial :=
+                p_juegos(i).piezas(j).saos(k).stock_inicial;
             p_saos_tmp(p_saos_tmp.count).stock_actual := p_juegos(i).piezas(j).saos(k).stock_actual;
             p_saos_tmp(p_saos_tmp.count).saldo_stock := p_juegos(i).piezas(j).saos(k).saldo_stock;
             p_saos_tmp(p_saos_tmp.count).sobrante := p_juegos(i).piezas(j).saos(k).sobrante;
             p_saos_tmp(p_saos_tmp.count).faltante := p_juegos(i).piezas(j).saos(k).faltante;
             p_saos_tmp(p_saos_tmp.count).cant_final := p_juegos(i).piezas(j).saos(k).cant_final;
             p_saos_tmp(p_saos_tmp.count).es_importado := p_juegos(i).piezas(j).saos(k).es_importado;
-            p_saos_tmp(p_saos_tmp.count).tiene_stock_itm := p_juegos(i).piezas(j).saos(k).tiene_stock_itm;
+            p_saos_tmp(p_saos_tmp.count).tiene_stock_itm :=
+                p_juegos(i).piezas(j).saos(k).tiene_stock_itm;
             p_saos_tmp(p_saos_tmp.count).id_color := p_juegos(i).piezas(j).saos(k).id_color;
           end loop;
         end loop;
@@ -520,7 +546,8 @@ create or replace package body surte as
       init();
       --       dbms_output.put_line('init ' || (dbms_utility.get_cpu_time - l_start_time));
 --       l_start_time := dbms_utility.get_cpu_time;
-      l_juegos := surte_loader.crea_coleccion(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden);
+      l_juegos :=
+          surte_loader.crea_coleccion(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden);
       --       dbms_output.put_line('crea_coleccion ' || (dbms_utility.get_cpu_time - l_start_time));
 --       l_start_time := dbms_utility.get_cpu_time;
       consume_stock(l_juegos);
