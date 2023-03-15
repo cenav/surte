@@ -1,7 +1,8 @@
-create or replace package surte_reporte as
+create or replace package pevisa.surte_reporte as
 
   type resumen_t is record (
     dsc_grupo          surte_util.t_string,
+    cod_for            surte_util.t_string,
     cod_pza            surte_util.t_string,
     cod_lin            surte_util.t_string,
     cantidad           number,
@@ -10,33 +11,76 @@ create or replace package surte_reporte as
     cantidad_op        number,
     por_emitir         number,
     consumo_anual      number,
+    stock              number,
+    prioridad          surte_util.t_string,
     material           surte_util.t_string,
-    ordenes            surte_util.t_string
+    ordenes            surte_util.t_string,
+    usado_en_sao       surte_util.t_string
   );
 
-  type faltante_t is record (
+  type cliente_t is record (
     break       surte_util.t_string,
     cod_cliente surte_util.t_string,
     nom_cliente surte_util.t_string,
     resumen     resumen_t
   );
 
-  type faltantes_aat is table of faltante_t index by binary_integer;
-  type faltantes_resumen_aat is table of resumen_t index by binary_integer;
+  type detalle_t is record (
+    nro_pedido number,
+    itm_pedido number,
+    valor      number,
+    cliente    cliente_t
+  );
+
+  type dias_t is record (
+    cod_cliente        surte_util.t_string,
+    nom_cliente        surte_util.t_string,
+    entre_90_180_dias  number,
+    entre_180_360_dias number,
+    mas_360_dias       number,
+    mas_90_dias        number,
+    menos_90_dias      number,
+    total              number,
+    ranking            number
+  );
+
+  type resumen_aat is table of resumen_t index by binary_integer;
+  type cliente_aat is table of cliente_t index by binary_integer;
+  type detalle_aat is table of detalle_t index by binary_integer;
+  type dias_aat is table of dias_t index by binary_integer;
 
   function faltante(
-    p_cliente    varchar2 default null
-  , p_simulacion varchar2 default '%'
-  , p_urgente    varchar2 default '%'
-  , p_faltante   number default null
-  , p_valor      number default null
-  ) return faltantes_aat;
+    p_cliente    varchar2
+  , p_simulacion varchar2
+  , p_urgente    varchar2
+  , p_faltante   number
+  , p_valor      number
+  ) return cliente_aat;
 
   function faltante_resumen(
-    p_simulacion varchar2 default '%'
-  , p_urgente    varchar2 default '%'
-  , p_faltante   number default null
-  , p_valor      number default null
-  ) return faltantes_resumen_aat;
+    p_cliente    varchar2
+  , p_simulacion varchar2
+  , p_urgente    varchar2
+  , p_faltante   number
+  , p_valor      number
+  ) return resumen_aat;
 
+  function faltante_detalle return detalle_aat;
+
+  function faltante_resumen_sao(
+    p_cliente    varchar2
+  , p_simulacion varchar2
+  , p_urgente    varchar2
+  , p_faltante   number
+  , p_valor      number
+  ) return resumen_aat;
+
+  function faltante_importe_atraso(
+    p_cliente    varchar2
+  , p_simulacion varchar2
+  , p_urgente    varchar2
+  , p_faltante   number
+  , p_valor      number
+  ) return dias_aat;
 end surte_reporte;
+/

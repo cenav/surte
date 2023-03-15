@@ -27,7 +27,10 @@ select *
 
 -- resumen de piezas faltantes para produccion
 select j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, sum(p.cantidad) as cantidad
-     , case when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null else j.cod_cliente end bk
+     , case
+         when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
+         else j.cod_cliente
+       end bk
   from vw_surte_jgo j
        join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
        join vw_articulo a on p.cod_pza = a.cod_art
@@ -39,7 +42,6 @@ select j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, sum(p.ca
         (j.es_urgente = :urgente or :urgente is null))
  group by j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin
  order by cod_cliente, dsc_grupo, cod_pza;
-
 
 select a.dsc_grupo, p.cod_pza, a.cod_lin
      , sum(p.cantidad) as cantidad
@@ -55,9 +57,24 @@ select a.dsc_grupo, p.cod_pza, a.cod_lin
  group by a.dsc_grupo, p.cod_pza, a.cod_lin
  order by dsc_grupo, cod_pza;
 
+select *
+  from vw_surte_jgo
+ where cod_jgo = 'KIT MH FS 85207-1 TG';
+
 select * from tmp_surte_jgo;
 
-begin
-  surte.por_item();
-end;
+select * from tmp_surte_pza;
 
+select *
+  from exclientes
+ where abreviada = 'CMOVIL';
+
+select * from color_surtimiento;
+
+-- VK 81200 R
+
+select sum(cant_surtir)
+  from tmp_surte_jgo_manual
+ group by cod_jgo;
+
+select * from vw_ordenes_pedido_pendiente;

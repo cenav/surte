@@ -1,4 +1,4 @@
-create or replace package surte_loader as
+CREATE OR REPLACE package PEVISA.surte_loader as
 
   function crea_coleccion(
     p_pais     varchar2 default null
@@ -10,3 +10,4 @@ create or replace package surte_loader as
   ) return surte_struct.juegos_aat;
 
 end surte_loader;
+/

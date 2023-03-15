@@ -1,4 +1,4 @@
-create or replace package body surte as
+create or replace package body pevisa.surte as
   gc_scope_prefix constant varchar2(31) := lower($$plsql_unit) || '.';
 
   bulk_errors exception;
@@ -563,6 +563,60 @@ create or replace package body surte as
     end;
   end;
 
+  procedure guarda_manual is
+  begin
+    if true then
+      insert into tmp_surte_jgo_manual( nro_pedido, itm_pedido, cod_cliente, nom_cliente, fch_pedido
+                                      , ot_tipo, ot_serie, ot_numero, cod_jgo, cant_prog
+                                      , cant_surtir, valor, valor_surtir, id_color, ranking)
+      select nro_pedido, itm_pedido, cod_cliente, nom_cliente, fch_pedido
+           , ot_tipo, ot_serie, ot_numero, cod_jgo, cant_prog
+           , case when id_color in ('C', 'P') then coalesce(cant_partir, cant_prog) end, valor
+           , valor_surtir, id_color, ranking
+        from tmp_surte_jgo
+       where es_prioritario = 0
+          or cod_jgo in (
+         select cod_art
+           from tmp_selecciona_articulo
+         );
+
+      insert into tmp_surte_pza_manual( nro_pedido, itm_pedido, cod_pza, cantidad, rendimiento
+                                      , stock_actual, cant_final, linea, es_importado
+                                      , tiene_stock_itm, es_sao, es_armado, es_reserva, id_color)
+      select nro_pedido, itm_pedido, cod_pza, cantidad, rendimiento
+           , stock_actual, cant_final, linea, es_importado
+           , tiene_stock_itm, es_sao, es_armado, es_reserva, id_color
+        from tmp_surte_pza p
+       where exists(
+                 select 1
+                   from tmp_surte_jgo_manual j
+                  where j.nro_pedido = p.nro_pedido
+                    and j.itm_pedido = p.itm_pedido
+               );
+    end if;
+  end;
+
+  procedure manual(
+    p_pais     varchar2 default null
+  , p_vendedor varchar2 default null
+  , p_dias     pls_integer default null
+  , p_empaque  varchar2 default null
+  , p_es_juego pls_integer default null
+  , p_orden    pls_integer default 1
+  ) is
+  begin
+    por_item(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden);
+    guarda_manual();
+    commit;
+  end;
+
+  procedure emite_sao(
+    p_opcion simple_integer
+  ) is
+  begin
+    surte_emite.sao(p_opcion);
+  end;
+
   function total_imprimir return number is
     l_total number := 0;
   begin
@@ -601,3 +655,4 @@ create or replace package body surte as
     return total_imprimir() + total_impreso();
   end;
 end surte;
+/

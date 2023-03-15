@@ -1,4 +1,4 @@
-create or replace package body surte_loader as
+create or replace package body pevisa.surte_loader as
 
   cursor pedidos_cur(
     p_pais varchar2
@@ -148,3 +148,4 @@ create or replace package body surte_loader as
   end;
 
 end surte_loader;
+/
