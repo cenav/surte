@@ -12,4 +12,16 @@ create or replace package surte_util as
     p_bool boolean
   ) return signtype;
 
+  function material(
+    p_formu_cod_art pr_for_ins.formu_art_cod_art%type
+  ) return varchar2;
+
+  function ribete(
+    p_formu_cod_art pr_for_ins.formu_art_cod_art%type
+  ) return varchar2;
+
+  function subpieza(
+    p_formu_cod_art pr_for_ins.formu_art_cod_art%type
+  ) return varchar2;
 end surte_util;
+/

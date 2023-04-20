@@ -73,8 +73,162 @@ select * from color_surtimiento;
 
 -- VK 81200 R
 
-select sum(cant_surtir)
-  from tmp_surte_jgo_manual
- group by cod_jgo;
+-- select sum(cant_surtir)
+--   from tmp_surte_jgo_manual
+--  group by cod_jgo;
 
 select * from vw_ordenes_pedido_pendiente;
+
+select *
+  from vw_surte_jgo
+ where nro_pedido = 14890
+   and itm_pedido = 24
+ order by ranking;
+
+select ranking, nom_cliente, nro_pedido, itm_pedido, fch_pedido, ot_numero, cod_jgo, cod_pza, valor
+     , cantidad, stock_actual, stock_inicial, nom_color
+  from vw_surte_pza
+ where cod_pza = '300.506SR'
+ order by ranking;
+
+select case
+         when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
+         else j.cod_cliente
+       end break
+     , j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
+     , sum(p.cantidad) as cantidad, a.cant_faltante, a.stock_requerida, a.saldo_op
+     , a.consumo_anual, min(j.orden_prioridad) as min_orden_prioridad
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+       join vw_articulo a on p.cod_pza = a.cod_art
+ where j.id_color in ('R', 'F')
+   and p.id_color = 'F'
+   and p.es_sao = 'NO'
+   and p.cod_pza = '300.506SR'
+--    and ((j.cod_cliente = p_cliente or p_cliente is null) and
+--         (j.es_simulacion like p_simulacion) and
+--         (j.es_urgente like p_urgente) and
+--         ((j.cant_faltante <= p_faltante or p_faltante is null) and
+--          (j.valor <= p_valor or p_valor is null)))
+ group by j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
+        , a.cant_faltante, a.stock_requerida, a.saldo_op, a.consumo_anual
+ order by cod_cliente, dsc_grupo, cod_pza;
+
+
+select case
+         when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
+         else j.cod_cliente
+       end break
+     , j.cod_cliente, j.nom_cliente, a.id_grupo, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
+     , sum(p.cantidad) as cantidad, a.cant_faltante, a.stock_requerida, a.saldo_op
+     , a.consumo_anual, min(j.orden_prioridad) as min_orden_prioridad
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+       join vw_articulo a on p.cod_pza = a.cod_art
+ where j.id_color in ('R', 'F')
+   and p.id_color = 'F'
+   and p.es_sao = 'NO'
+ group by j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
+        , a.cant_faltante, a.stock_requerida, a.saldo_op, a.consumo_anual, a.id_grupo
+ order by cod_cliente, dsc_grupo, cod_pza;
+
+select f.art_cod_art
+  from pr_for_ins f
+       join articul a on f.art_cod_art = a.cod_art
+ where f.formu_art_cod_art = '1179TG'
+   and (a.cod_lin between '2004' and '2008'
+   or a.cod_lin = '1601');
+
+
+select cod_art
+     , sum(saldo) as saldo_op
+     , listagg(numero || '(' || estado || ', ' || cant_prog || ')', ' | ')
+               within group ( order by estado, numero) as numero_op
+  from vw_ordenes_curso
+ where nuot_tipoot_codigo = 'PR'
+ group by cod_art;
+
+
+select *
+  from vw_surte_jgo
+ where dsc_grupo is not null;
+
+select * from vw_surte_pza;
+
+select *
+  from articul
+ where ((cod_lin between '1620' and '1634') or (cod_lin between '2010' and '2019'))
+   and length(cod_lin) = 4;
+
+select *
+  from vw_articulo
+ where cod_art = '380.760';
+
+select case
+         when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
+         else j.cod_cliente
+       end break
+     , j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
+     , sum(p.cantidad) as cantidad, a.cant_faltante, a.stock_requerida, a.saldo_op
+     , a.consumo_anual, min(j.orden_prioridad) as min_orden_prioridad, a.stock
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+       join vw_articulo a on p.cod_pza = a.cod_art
+ where j.id_color in ('R', 'F')
+   and p.id_color = 'F'
+   and p.es_sao = 'NO'
+   and cod_art = '380.760'
+ group by j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
+        , a.cant_faltante, a.stock_requerida, a.saldo_op, a.consumo_anual, a.stock
+ order by cod_cliente, dsc_grupo, cod_pza;
+
+select ranking, nom_cliente, nro_pedido, itm_pedido, fch_pedido, ot_numero, cod_jgo, cod_pza, valor
+     , cantidad, rendimiento, stock_actual, cant_final, saldo_stock, stock_inicial, nom_color
+  from vw_surte_pza
+ where cod_pza = '380.503N'
+ order by ranking;
+
+select *
+  from vw_surte_jgo
+ where nro_pedido = 15484
+   and itm_pedido = 84;
+
+select *
+  from vw_surte_pza
+ where nro_pedido = 15484
+   and itm_pedido = 84;
+
+  with pedidos as (
+    select nro_pedido, nom_cliente, to_char(fch_pedido, 'dd/mm/yyyy') as fch_pedido
+         , min(ranking) as ranking
+      from vw_surte_jgo
+     group by nro_pedido, nom_cliente, fch_pedido, ranking
+    )
+select p.nro_pedido, p.nom_cliente, p.fch_pedido, p.ranking
+  from pedidos p
+ order by p.ranking;
+
+select nro_pedido, nom_cliente, to_char(fch_pedido, 'dd/mm/yyyy') as fch_pedido
+  from vw_surte_jgo
+ group by nro_pedido, nom_cliente, fch_pedido, ranking
+ order by nom_cliente;
+
+select * from vw_surte_jgo;
+
+select distinct cod_pza from vw_surte_pza order by cod_pza;
+
+select p.ranking, p.nom_cliente, p.nro_pedido, p.itm_pedido, p.fch_pedido, p.ot_numero, p.cod_jgo
+     , p.cod_pza, p.valor, p.cantidad, p.rendimiento, p.stock_actual, p.cant_final, p.saldo_stock
+     , p.stock_inicial, p.nom_color as color_pza, j.nom_color as color_jgo
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+--  where cod_pza = :trazabilidad.cod_pza
+ order by p.ranking;
+
+select sum(cantidad)
+  from vw_surte_pza
+ where cod_pza = '290.3231ALR';
+
+select sum(cantidad)
+  from vw_surte_sao
+ where cod_sao = '290.3231ALR';

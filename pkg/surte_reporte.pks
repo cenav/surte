@@ -5,6 +5,7 @@ create or replace package pevisa.surte_reporte as
     cod_for            surte_util.t_string,
     cod_pza            surte_util.t_string,
     cod_lin            surte_util.t_string,
+    valor              number,
     cantidad           number,
     faltante_total     number,
     faltante_sin_stock number,
@@ -12,8 +13,11 @@ create or replace package pevisa.surte_reporte as
     por_emitir         number,
     consumo_anual      number,
     stock              number,
+    ranking            number,
     prioridad          surte_util.t_string,
     material           surte_util.t_string,
+    ribete             surte_util.t_string,
+    subpieza           surte_util.t_string,
     ordenes            surte_util.t_string,
     usado_en_sao       surte_util.t_string
   );
@@ -26,10 +30,13 @@ create or replace package pevisa.surte_reporte as
   );
 
   type detalle_t is record (
-    nro_pedido number,
-    itm_pedido number,
-    valor      number,
-    cliente    cliente_t
+    nro_pedido  number,
+    itm_pedido  number,
+    valor       number,
+    fch_pedido  date,
+    dias_atraso number,
+    ranking     number,
+    cliente     cliente_t
   );
 
   type dias_t is record (
@@ -55,6 +62,7 @@ create or replace package pevisa.surte_reporte as
   , p_urgente    varchar2
   , p_faltante   number
   , p_valor      number
+  , p_dias       number
   ) return cliente_aat;
 
   function faltante_resumen(
@@ -63,9 +71,17 @@ create or replace package pevisa.surte_reporte as
   , p_urgente    varchar2
   , p_faltante   number
   , p_valor      number
+  , p_dias       number
   ) return resumen_aat;
 
-  function faltante_detalle return detalle_aat;
+  function faltante_detalle(
+    p_cliente    varchar2
+  , p_simulacion varchar2
+  , p_urgente    varchar2
+  , p_faltante   number
+  , p_valor      number
+  , p_dias       number
+  ) return detalle_aat;
 
   function faltante_resumen_sao(
     p_cliente    varchar2
@@ -73,6 +89,7 @@ create or replace package pevisa.surte_reporte as
   , p_urgente    varchar2
   , p_faltante   number
   , p_valor      number
+  , p_dias       number
   ) return resumen_aat;
 
   function faltante_importe_atraso(
@@ -81,6 +98,7 @@ create or replace package pevisa.surte_reporte as
   , p_urgente    varchar2
   , p_faltante   number
   , p_valor      number
+  , p_dias       number
   ) return dias_aat;
 end surte_reporte;
 /

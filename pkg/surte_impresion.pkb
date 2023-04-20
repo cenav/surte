@@ -49,4 +49,23 @@ create or replace package body surte_impresion as
     borra(user);
   end;
 
+  procedure selecciona(
+    p_juegos  varchar2
+  , p_sueltos varchar2
+  ) is
+  begin
+    update tmp_surte_jgo
+       set imprimir = case
+                        when id_color in ('C', 'P') and es_simulacion = 0 then
+                          case
+                            when es_prioritario = 1 then 1
+                            when p_juegos = 1 and es_juego = 1 then 1
+                            when p_sueltos = 1 and es_juego = 0 then 1
+                            else 0
+                          end
+                        else
+                          0
+                      end;
+  end;
 end surte_impresion;
+/

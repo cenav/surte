@@ -39,3 +39,32 @@ select p.cod_cliente, p.nom_cliente
  order by ranking;
 
 select * from vw_surte_jgo;
+
+-- CREATE USER ksiguenas PROFILE 'profile_usuario_sig';
+alter user pruebas account unlock;
+
+
+alter user oquintana account lock;
+
+
+alter user pruebas identified by "pevisa.123";
+
+
+alter user pruebas password expire;
+
+
+grant select any table, insert any table, delete any table, update any table to asocial;
+
+-- Account locked
+select username, account_status, created, lock_date, expiry_date
+  from dba_users
+ where username like 'PRUEBAS';
+
+select *
+  from tmp_surte_jgo
+ where nro_pedido = 15604;
+
+select *
+  from vw_surte_jgo
+ where nro_pedido = 15604
+   and itm_pedido = 15;
