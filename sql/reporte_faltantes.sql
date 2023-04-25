@@ -229,6 +229,85 @@ select sum(cantidad)
   from vw_surte_pza
  where cod_pza = '290.3231ALR';
 
-select sum(cantidad)
-  from vw_surte_sao
- where cod_sao = '290.3231ALR';
+select *
+  from vw_surte_jgo;
+
+-- create view vw_surte_faltante as
+  with faltantes as (
+    select j.nro_pedido, j.itm_pedido, j.cod_cliente, j.nom_cliente, j.cod_jgo, a.dsc_grupo
+         , p.cod_pza, a.cod_lin, a.numero_op, p.cantidad, a.cant_faltante, a.stock_requerida
+         , a.saldo_op, a.consumo_anual, a.stock, j.valor, j.fch_pedido
+         , min(j.orden_prioridad) as min_orden_prioridad, j.ranking
+         , trunc(sysdate - j.fch_pedido) as dias_atraso
+      from vw_surte_jgo j
+           join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+           join tmp_surte_faltante f
+                on p.nro_pedido = f.nro_pedido
+                  and p.itm_pedido = f.itm_pedido
+                  and p.cod_pza = f.cod_pza
+           join vw_articulo a on p.cod_pza = a.cod_art
+     group by j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
+            , a.cant_faltante, a.stock_requerida, a.saldo_op, a.consumo_anual, j.nro_pedido
+            , j.itm_pedido, j.cod_jgo, a.stock, j.valor, j.fch_pedido, j.ranking, p.cantidad
+     order by dsc_grupo, ranking, cod_cliente, cod_pza
+    )
+     , sao as (
+    select p.cod_cliente, p.nom_cliente, s.cod_sao
+      from vw_surte_pza p
+           join vw_surte_sao s
+                on p.nro_pedido = s.nro_pedido
+                  and p.itm_pedido = s.itm_pedido
+                  and p.cod_pza = s.cod_pza
+     group by p.cod_cliente, p.nom_cliente, s.cod_sao
+    )
+select f.nro_pedido, f.itm_pedido, f.cod_cliente, f.nom_cliente, f.cod_jgo, f.dsc_grupo
+     , f.cod_pza, f.cod_lin, f.numero_op, f.cantidad, f.cant_faltante, f.stock_requerida
+     , f.saldo_op, f.consumo_anual, p.dsc_prioridad, f.stock, f.valor, f.fch_pedido, f.ranking
+     , case when s.cod_sao is not null then '*' end as usado_en_sao, f.dias_atraso
+  from faltantes f
+       left join prioridad_pedidos p on f.min_orden_prioridad = p.orden
+       left join sao s on f.cod_cliente = s.cod_cliente and f.cod_pza = s.cod_sao
+ where f.cod_cliente = 'G001';
+
+-- select *
+--   from vw_surte_faltante
+--  where nro_pedido = 14732;
+
+select nro_pedido, itm_pedido, cod_pza, faltante, ranking, cod_cliente, nom_cliente, valor
+     , fch_pedido, dias_atraso, dsc_grupo, cod_for, cod_lin, faltante_total, faltante_sin_stock
+     , cantidad_op, por_emitir, consumo_anual, stock, prioridad, material, ribete, subpieza, ordenes
+     , usado_en_sao
+  from tmp_surte_faltante;
+
+select cod_cliente, nom_cliente, dsc_grupo, cod_pza, cod_lin
+     , ordenes, faltante_total, faltante_sin_stock, cantidad_op
+     , consumo_anual, material, ribete, subpieza, prioridad, stock
+     , usado_en_sao
+     , sum(faltante) as faltante
+     , sum(por_emitir) as por_emitir
+     , sum(valor) as valor
+     , min(ranking) as ranking
+  from tmp_surte_faltante
+ group by cod_cliente, nom_cliente, dsc_grupo, cod_pza, cod_lin
+        , ordenes, faltante_total, faltante_sin_stock, cantidad_op
+        , consumo_anual, material, ribete, subpieza, prioridad, stock
+        , usado_en_sao;
+
+select dsc_grupo, cod_pza, cod_lin, ordenes, faltante_total, faltante_sin_stock, cantidad_op
+     , consumo_anual, material, ribete, subpieza, prioridad, stock, usado_en_sao
+     , sum(faltante) as faltante
+     , sum(por_emitir) as por_emitir
+     , sum(valor) as valor
+     , min(ranking) as ranking
+  from tmp_surte_faltante
+ group by dsc_grupo, cod_pza, cod_lin, ordenes, faltante_total, faltante_sin_stock, cantidad_op
+        , consumo_anual, material, ribete, subpieza, prioridad, stock, usado_en_sao;
+
+select distinct dsc_grupo
+  from tmp_surte_faltante
+ where dsc_grupo is not null
+ order by 1;
+
+select cod_cliente, nom_cliente, entre_90_180_dias, entre_180_360_dias, mas_360_dias, mas_90_dias
+     , menos_90_dias, total, ranking
+  from vw_surte_faltante_atraso;

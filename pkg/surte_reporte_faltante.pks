@@ -1,4 +1,4 @@
-create or replace package pevisa.surte_reporte as
+create or replace package pevisa.surte_reporte_faltante as
 
   type resumen_t is record (
     dsc_grupo          surte_util.t_string,
@@ -112,5 +112,5 @@ create or replace package pevisa.surte_reporte as
 
   procedure guarda_detalle;
 
-end surte_reporte;
+end surte_reporte_faltante;
 /

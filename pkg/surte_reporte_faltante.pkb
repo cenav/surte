@@ -1,21 +1,4 @@
-create or replace package body pevisa.surte_reporte as
-  /*
-   Private routines
-   */
-  function cant_emitir(
-    p_faltante number
-  , p_saldo    number
-  ) return number is
-    l_emitir number := 0;
-  begin
-    l_emitir := greatest(p_faltante - nvl(p_saldo, 0), 0);
-    return case
-             when l_emitir >= 300 then
-               multiplo.superior(l_emitir, 50)
-             else
-               multiplo.superior(l_emitir, 10)
-           end;
-  end;
+create or replace package body pevisa.surte_reporte_faltante as
 
   procedure guarda_detalle(
     p_cliente    varchar2
@@ -52,6 +35,32 @@ create or replace package body pevisa.surte_reporte as
                 (sysdate - j.fch_pedido > p_dias or p_dias is null) and
                 ((j.cant_faltante <= p_faltante or p_faltante is null) and
                  (j.valor >= p_valor or p_valor is null)))
+--          order by dsc_grupo, ranking, cod_cliente, cod_pza
+         union all
+        select j.nro_pedido, j.itm_pedido, j.cod_cliente, j.nom_cliente, p.cod_pza, a.dsc_grupo
+             , s.cod_sao, a.cod_lin, a.numero_op, s.cantidad as faltante, a.cant_faltante
+             , a.stock_requerida, a.saldo_op, a.consumo_anual, a.stock, j.valor, j.fch_pedido
+             , j.orden_prioridad, j.ranking
+             , trunc(sysdate - j.fch_pedido) as dias_atraso
+             , greatest(a.cant_faltante - nvl(a.saldo_op, 0), 0) as emitir
+          from vw_surte_jgo j
+               join vw_surte_pza p
+                    on j.nro_pedido = p.nro_pedido
+                      and j.itm_pedido = p.itm_pedido
+               join vw_surte_sao s
+                    on p.nro_pedido = s.nro_pedido
+                      and p.itm_pedido = s.itm_pedido
+                      and p.cod_pza = s.cod_pza
+               join vw_articulo a on s.cod_pza = a.cod_art
+         where p.id_color = 'F'
+           and s.id_color = 'F'
+           and p.es_sao = 'SI'
+           and ((j.cod_cliente = p_cliente or p_cliente is null) and
+                (j.es_simulacion like p_simulacion) and
+                (j.es_urgente like p_urgente) and
+                (sysdate - j.fch_pedido > p_dias or p_dias is null) and
+                ((j.cant_faltante <= p_faltante or p_faltante is null) and
+                 (j.valor >= p_valor or p_valor is null)))
          order by dsc_grupo, ranking, cod_cliente, cod_pza
         )
          , sao as (
@@ -77,7 +86,7 @@ create or replace package body pevisa.surte_reporte as
          , surte_util.ribete(f.cod_pza)
          , surte_util.subpieza(f.cod_pza)
          , f.numero_op
-         , case when s.cod_sao is not null then '*' end as usado_en_sao
+         , case when s.cod_sao is not null then 'SI' end as usado_en_sao
       from faltantes f
            left join prioridad_pedidos p on f.orden_prioridad = p.orden
            left join sao s on f.cod_cliente = s.cod_cliente and f.cod_pza = s.cod_sao;
@@ -164,7 +173,6 @@ create or replace package body pevisa.surte_reporte as
       l_clientes(l_idx).resumen.faltante_total := r.cant_faltante;
       l_clientes(l_idx).resumen.faltante_sin_stock := r.cant_faltante - r.stock_requerida;
       l_clientes(l_idx).resumen.cantidad_op := r.saldo_op;
-      l_clientes(l_idx).resumen.por_emitir := cant_emitir(r.cant_faltante, r.saldo_op);
       l_clientes(l_idx).resumen.consumo_anual := r.consumo_anual;
       l_clientes(l_idx).resumen.material := surte_util.material(r.cod_pza);
       l_clientes(l_idx).resumen.ribete := surte_util.ribete(r.cod_pza);
@@ -238,7 +246,6 @@ create or replace package body pevisa.surte_reporte as
       l_resumen(l_idx).faltante_total := r.cant_faltante;
       l_resumen(l_idx).faltante_sin_stock := r.cant_faltante - r.stock_requerida;
       l_resumen(l_idx).cantidad_op := r.saldo_op;
-      l_resumen(l_idx).por_emitir := cant_emitir(r.cant_faltante, r.saldo_op);
       l_resumen(l_idx).consumo_anual := r.consumo_anual;
       l_resumen(l_idx).material := surte_util.material(r.cod_pza);
       l_resumen(l_idx).ribete := surte_util.ribete(r.cod_pza);
@@ -300,7 +307,6 @@ create or replace package body pevisa.surte_reporte as
       l_resumen(l_idx).faltante_total := r.cant_faltante;
       l_resumen(l_idx).faltante_sin_stock := r.cant_faltante - r.stock_requerida;
       l_resumen(l_idx).cantidad_op := r.saldo_op;
-      l_resumen(l_idx).por_emitir := cant_emitir(r.cant_faltante, r.saldo_op);
       l_resumen(l_idx).consumo_anual := r.consumo_anual;
       l_resumen(l_idx).material := surte_util.material(r.cod_pza);
       l_resumen(l_idx).ribete := surte_util.ribete(r.cod_pza);
@@ -380,7 +386,6 @@ create or replace package body pevisa.surte_reporte as
       l_detalle(l_idx).cliente.resumen.faltante_total := r.cant_faltante;
       l_detalle(l_idx).cliente.resumen.faltante_sin_stock := r.cant_faltante - r.stock_requerida;
       l_detalle(l_idx).cliente.resumen.cantidad_op := r.saldo_op;
-      l_detalle(l_idx).cliente.resumen.por_emitir := cant_emitir(r.cant_faltante, r.saldo_op);
       l_detalle(l_idx).cliente.resumen.consumo_anual := r.consumo_anual;
       l_detalle(l_idx).cliente.resumen.material := surte_util.material(r.cod_pza);
       l_detalle(l_idx).cliente.resumen.ribete := surte_util.ribete(r.cod_pza);
@@ -449,5 +454,5 @@ create or replace package body pevisa.surte_reporte as
     end loop;
     return l_atraso;
   end;
-end surte_reporte;
+end surte_reporte_faltante;
 /
