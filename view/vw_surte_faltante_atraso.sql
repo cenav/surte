@@ -7,11 +7,10 @@ create or replace view vw_surte_faltante_atraso as
             , ranking
     )
 select p.cod_cliente, p.nom_cliente
-     , sum(case when dias >= 90 and dias < 180 then valor else 0 end) as entre_90_180_dias
-     , sum(case when dias >= 180 and dias < 360 then valor else 0 end) as entre_180_360_dias
-     , sum(case when dias >= 360 then valor else 0 end) as mas_360_dias
-     , sum(case when dias >= 90 then valor else 0 end) as mas_90_dias
-     , sum(case when dias < 90 then valor else 0 end) as menos_90_dias
+     , sum(case when dias <= 90 then valor else 0 end) as menos_90_dias
+     , sum(case when dias >= 91 and dias <= 180 then valor else 0 end) as entre_90_180_dias
+     , sum(case when dias >= 181 and dias <= 360 then valor else 0 end) as entre_180_360_dias
+     , sum(case when dias >= 361 then valor else 0 end) as mas_360_dias
      , sum(valor) as total
      , min(p.ranking) as ranking
   from pedidos p

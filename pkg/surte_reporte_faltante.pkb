@@ -1,46 +1,49 @@
 create or replace package body pevisa.surte_reporte_faltante as
 
   procedure guarda_detalle(
-    p_cliente    varchar2
-  , p_simulacion varchar2
-  , p_urgente    varchar2
-  , p_faltante   number
-  , p_valor      number
-  , p_dias       number
+    p_cliente     varchar2
+  , p_urgente     varchar2
+  , p_faltante    number
+  , p_valor       number
+  , p_dias        number
+  , p_prioritario varchar2
+  , p_pais        varchar2
+  , p_vendedor    varchar2
+  , p_pedido      number
   ) is
   begin
     delete from tmp_surte_faltante;
 
-    insert into tmp_surte_faltante( nro_pedido, itm_pedido, cod_pza, faltante, ranking, cod_cliente
-                                  , nom_cliente, valor, fch_pedido, dias_atraso, dsc_grupo, cod_for
-                                  , cod_lin, faltante_total, faltante_sin_stock, cantidad_op
-                                  , por_emitir, consumo_anual, stock, prioridad, material, ribete
-                                  , subpieza, ordenes, usado_en_sao)
+    insert into tmp_surte_faltante( nro_pedido, itm_pedido, cod_pza, requerida, faltante, ranking
+                                  , cod_cliente, nom_cliente, valor, fch_pedido, dias_atraso
+                                  , dsc_grupo, cod_for, cod_lin, faltante_total, faltante_sin_stock
+                                  , cantidad_op, por_emitir, consumo_anual, stock, prioridad
+                                  , material, ribete, subpieza, ordenes, usado_en_sao)
       with faltantes as (
         select j.nro_pedido, j.itm_pedido, j.cod_cliente, j.nom_cliente, j.cod_jgo, a.dsc_grupo
-             , p.cod_pza, a.cod_lin, a.numero_op, cantidad as faltante, a.cant_faltante
+             , p.cod_pza, a.cod_lin, a.numero_op, p.faltante, a.cant_faltante
              , a.stock_requerida, a.saldo_op, a.consumo_anual, a.stock, j.valor, j.fch_pedido
-             , j.orden_prioridad, j.ranking
+             , j.orden_prioridad, j.ranking, p.cantidad
              , trunc(sysdate - j.fch_pedido) as dias_atraso
              , greatest(a.cant_faltante - nvl(a.saldo_op, 0), 0) as emitir
           from vw_surte_jgo j
                join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
                join vw_articulo a on p.cod_pza = a.cod_art
-         where j.id_color in ('R', 'F')
-           and p.id_color = 'F'
-           and p.es_sao = 'NO'
-           and ((j.cod_cliente = p_cliente or p_cliente is null) and
-                (j.es_simulacion like p_simulacion) and
-                (j.es_urgente like p_urgente) and
-                (sysdate - j.fch_pedido > p_dias or p_dias is null) and
-                ((j.cant_faltante <= p_faltante or p_faltante is null) and
-                 (j.valor >= p_valor or p_valor is null)))
---          order by dsc_grupo, ranking, cod_cliente, cod_pza
+--          where j.id_color in ('R', 'F')
+--            and p.id_color = 'F'
+--            and p.es_sao = 'NO'
+         where ((es_prioritario = p_prioritario and p_prioritario = 'SI')
+           or ((j.cod_cliente = p_cliente or p_cliente is null) and
+               (j.es_urgente like p_urgente) and
+               (j.nro_pedido = p_pedido or p_pedido is null) and
+               (sysdate - j.fch_pedido > p_dias or p_dias is null) and
+               ((j.cant_faltante <= p_faltante or p_faltante is null) and
+                (j.valor >= p_valor or p_valor is null))))
          union all
         select j.nro_pedido, j.itm_pedido, j.cod_cliente, j.nom_cliente, p.cod_pza, a.dsc_grupo
-             , s.cod_sao, a.cod_lin, a.numero_op, s.cantidad as faltante, a.cant_faltante
+             , s.cod_sao, a.cod_lin, a.numero_op, p.faltante, a.cant_faltante
              , a.stock_requerida, a.saldo_op, a.consumo_anual, a.stock, j.valor, j.fch_pedido
-             , j.orden_prioridad, j.ranking
+             , j.orden_prioridad, j.ranking, p.cantidad
              , trunc(sysdate - j.fch_pedido) as dias_atraso
              , greatest(a.cant_faltante - nvl(a.saldo_op, 0), 0) as emitir
           from vw_surte_jgo j
@@ -52,15 +55,16 @@ create or replace package body pevisa.surte_reporte_faltante as
                       and p.itm_pedido = s.itm_pedido
                       and p.cod_pza = s.cod_pza
                join vw_articulo a on s.cod_pza = a.cod_art
-         where p.id_color = 'F'
-           and s.id_color = 'F'
-           and p.es_sao = 'SI'
-           and ((j.cod_cliente = p_cliente or p_cliente is null) and
-                (j.es_simulacion like p_simulacion) and
-                (j.es_urgente like p_urgente) and
-                (sysdate - j.fch_pedido > p_dias or p_dias is null) and
-                ((j.cant_faltante <= p_faltante or p_faltante is null) and
-                 (j.valor >= p_valor or p_valor is null)))
+--          where p.id_color = 'F'
+--            and s.id_color = 'F'
+--            and p.es_sao = 'SI'
+         where ((es_prioritario = p_prioritario and p_prioritario = 'SI')
+           or ((j.cod_cliente = p_cliente or p_cliente is null) and
+               (j.es_urgente like p_urgente) and
+               (j.nro_pedido = p_pedido or p_pedido is null) and
+               (sysdate - j.fch_pedido > p_dias or p_dias is null) and
+               ((j.cant_faltante <= p_faltante or p_faltante is null) and
+                (j.valor >= p_valor or p_valor is null))))
          order by dsc_grupo, ranking, cod_cliente, cod_pza
         )
          , sao as (
@@ -72,7 +76,7 @@ create or replace package body pevisa.surte_reporte_faltante as
                       and p.cod_pza = s.cod_pza
          group by p.cod_cliente, p.nom_cliente, s.cod_sao
         )
-    select f.nro_pedido, f.itm_pedido, f.cod_pza, f.faltante, f.ranking, f.cod_cliente
+    select f.nro_pedido, f.itm_pedido, f.cod_pza, f.cantidad, f.faltante, f.ranking, f.cod_cliente
          , f.nom_cliente, f.valor, f.fch_pedido, f.dias_atraso, f.dsc_grupo, f.cod_jgo, f.cod_lin
          , f.cant_faltante, f.stock_requerida, f.saldo_op
          , case
@@ -96,11 +100,14 @@ create or replace package body pevisa.surte_reporte_faltante as
   begin
     guarda_detalle(
         p_cliente => null
-      , p_simulacion => '%'
       , p_urgente => '%'
       , p_faltante => null
       , p_valor => null
       , p_dias => null
+      , p_prioritario => null
+      , p_pais => null
+      , p_vendedor => null
+      , p_pedido => null
       );
   end;
 
@@ -131,10 +138,10 @@ create or replace package body pevisa.surte_reporte_faltante as
             from vw_surte_jgo j
                  join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
                  join vw_articulo a on p.cod_pza = a.cod_art
-           where j.id_color in ('R', 'F')
-             and p.id_color = 'F'
-             and p.es_sao = 'NO'
-             and ((j.cod_cliente = p_cliente or p_cliente is null) and
+--            where j.id_color in ('R', 'F')
+--              and p.id_color = 'F'
+--              and p.es_sao = 'NO'
+           where ((j.cod_cliente = p_cliente or p_cliente is null) and
                   (j.es_simulacion like p_simulacion) and
                   (j.es_urgente like p_urgente) and
                   (sysdate - j.fch_pedido > p_dias or p_dias is null) and
@@ -207,10 +214,10 @@ create or replace package body pevisa.surte_reporte_faltante as
             from vw_surte_jgo j
                  join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
                  join vw_articulo a on p.cod_pza = a.cod_art
-           where j.id_color in ('R', 'F')
-             and p.id_color = 'F'
-             and p.es_sao = 'NO'
-             and ((j.cod_cliente = p_cliente or p_cliente is null) and
+--            where j.id_color in ('R', 'F')
+--              and p.id_color = 'F'
+--              and p.es_sao = 'NO'
+           where ((j.cod_cliente = p_cliente or p_cliente is null) and
                   (j.es_simulacion like p_simulacion) and
                   (j.es_urgente like p_urgente) and
                   (sysdate - j.fch_pedido > p_dias or p_dias is null) and

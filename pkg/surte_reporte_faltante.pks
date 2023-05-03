@@ -102,12 +102,15 @@ create or replace package pevisa.surte_reporte_faltante as
   ) return dias_aat;
 
   procedure guarda_detalle(
-    p_cliente    varchar2
-  , p_simulacion varchar2
-  , p_urgente    varchar2
-  , p_faltante   number
-  , p_valor      number
-  , p_dias       number
+    p_cliente     varchar2
+  , p_urgente     varchar2
+  , p_faltante    number
+  , p_valor       number
+  , p_dias        number
+  , p_prioritario varchar2
+  , p_pais        varchar2
+  , p_vendedor    varchar2
+  , p_pedido      number
   );
 
   procedure guarda_detalle;

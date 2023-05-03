@@ -1,12 +1,10 @@
--- alter table pevisa.tmp_surte_faltante
---   drop primary key cascade;
---
--- drop table pevisa.tmp_surte_faltante cascade constraints;
---
+drop table pevisa.tmp_surte_faltante cascade constraints;
+
 create global temporary table pevisa.tmp_surte_faltante (
   nro_pedido         number(8),
   itm_pedido         number(4),
   cod_pza            varchar2(30),
+  requerida          number,
   faltante           number,
   ranking            number,
   cod_cliente        varchar2(100),
@@ -33,16 +31,14 @@ create global temporary table pevisa.tmp_surte_faltante (
   on commit preserve rows
   nocache;
 
-create unique index pevisa.pk_tmp_surte_faltante on pevisa.tmp_surte_faltante(nro_pedido, itm_pedido, cod_pza);
+create index pevisa.idx_tmp_surte_faltante_pedido on pevisa.tmp_surte_faltante(nro_pedido);
+
+create index pevisa.idx_tmp_surte_faltante_pza on pevisa.tmp_surte_faltante(cod_pza);
+
+create index pevisa.idx_tmp_surte_faltante_grupo on pevisa.tmp_surte_faltante(dsc_grupo);
+
+create index pevisa.idx_tmp_surte_faltante_cliente on pevisa.tmp_surte_faltante(cod_cliente);
 
 create or replace public synonym tmp_surte_faltante for pevisa.tmp_surte_faltante;
-
-alter table pevisa.tmp_surte_faltante
-  add (
-    constraint pk_tmp_surte_faltante
-      primary key (nro_pedido, itm_pedido, cod_pza)
-        using index pevisa.pk_tmp_surte_faltante
-        enable validate
-    );
 
 grant delete, insert, select, update on pevisa.tmp_surte_faltante to sig_roles_invitado;

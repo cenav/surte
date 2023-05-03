@@ -308,6 +308,134 @@ select distinct dsc_grupo
  where dsc_grupo is not null
  order by 1;
 
-select cod_cliente, nom_cliente, entre_90_180_dias, entre_180_360_dias, mas_360_dias, mas_90_dias
+select cod_cliente, nom_cliente, entre_90_180_dias, entre_180_360_dias, mas_360_dias
      , menos_90_dias, total, ranking
   from vw_surte_faltante_atraso;
+
+select * from vw_surte_jgo;
+
+select pedido, pedido_item, pais, vendedor
+  from vw_ordenes_pedido_pendiente
+ group by pedido, pedido_item, pais, vendedor;
+
+select *
+  from expaises
+ where pais = '05';
+
+select *
+  from tablas_auxiliares
+ where codigo = '....';
+
+select *
+  from tablas_auxiliares
+ where tipo = 25
+ order by codigo;
+
+select *
+  from extablas_expo
+ where tipo = 13;
+
+select *
+  from vw_surte_jgo
+ where nro_pedido = 15526;
+
+
+select *
+  from expedidos
+ where numero = 15526;
+
+select *
+  from expedido_d
+ where numero = 15526
+   and nro = 30;
+
+select *
+  from pr_ot
+ where abre01 = '15526'
+   and numero = 890929;
+
+select *
+  from pr_ot_det
+ where ot_nuot_tipoot_codigo = 'AR'
+   and ot_numero = 890929
+   and cant_formula - nvl(saldo, 0) > 0;
+
+select *
+  from pr_ot_impresion
+ where nuot_tipoot_codigo = 'AR'
+   and numero = 890929;
+
+select *
+  from pr_ot_impresion
+ where numero = 890929;
+
+select * from view_pedidos_pendientes_38;
+
+select *
+  from vw_surte_jgo
+ where ((es_prioritario = :p_prioritario and :p_prioritario = 'SI')
+   or ((cod_cliente = :p_cliente or :p_cliente is null) and
+       (nro_pedido = :p_pedido or :p_pedido is null)));
+
+select nro_pedido, nom_cliente
+  from vw_surte_jgo
+ group by nro_pedido, nom_cliente
+ order by nom_cliente, nro_pedido;
+
+select * from tmp_surte_pza;
+
+select cantidad, faltante
+  from tmp_surte_pza
+ where faltante is not null;
+
+select cod_cliente, nom_cliente, dsc_grupo, cod_pza, cod_lin
+     , ordenes, faltante_total, faltante_sin_stock, cantidad_op
+     , consumo_anual, material, ribete, subpieza, prioridad, stock
+     , usado_en_sao
+     , sum(requerida) as requerida
+     , sum(faltante) as faltante
+     , sum(por_emitir) as por_emitir
+     , sum(valor) as valor
+     , min(ranking) as ranking
+  from tmp_surte_faltante
+ group by cod_cliente, nom_cliente, dsc_grupo, cod_pza, cod_lin
+        , ordenes, faltante_total, faltante_sin_stock, cantidad_op
+        , consumo_anual, material, ribete, subpieza, prioridad, stock
+        , usado_en_sao;
+
+select *
+  from vw_surte_pza
+ where cod_pza = '450.216'
+   and nro_pedido = 15678
+   and cod_jgo = 'KIT AUT FS 3688 MX5 GR';
+
+select *
+  from tmp_surte_pza
+ where cod_pza = '450.216'
+   and nro_pedido = 15678;
+
+select *
+  from tmp_surte_jgo
+ where nom_cliente = 'EyE';
+
+select *
+  from exclientes
+ where cod_cliente = '990655';
+
+select *
+  from pr_ot_impresion
+ where nuot_tipoot_codigo = 'AR'
+   and numero = 823061;
+
+select *
+  from pr_ot
+ where nuot_tipoot_codigo = 'PP'
+   and numero = 71538205;
+
+select *
+  from vw_articulo
+ where cod_art = '400.1741VIT';
+
+select cod_art, cant_faltante, stock_requerida, stock, consumo_anual, saldo_op, numero_op
+  from vw_articulo
+ where cod_art = '180.654FIB';
