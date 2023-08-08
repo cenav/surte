@@ -5,7 +5,8 @@ create table pevisa.param_surte (
   prioritario          number(1),
   dias_impreso_bien    number(5),
   dias_impreso_mal     number(6),
-  max_faltante_reserva number(3)
+  max_faltante_reserva number(3),
+  min_valor_reserva    number(10, 2)
 )
   tablespace pevisad;
 
@@ -29,12 +30,6 @@ alter table pevisa.param_surte
 
 grant delete, insert, select, update on pevisa.param_surte to sig_roles_invitado;
 
-select * from param_surte;
-
-alter table param_surte
-  add max_faltante_reserva number(3);
-
-alter table PEVISA.param_surte drop column min_valor_reserva;
-
-alter table param_surte
-  add min_valor_reserva number(10, 2);
+insert into pevisa.param_surte ( id_param, valor_item, valor_partir, prioritario, dias_impreso_bien
+                               , dias_impreso_mal, max_faltante_reserva, min_valor_reserva)
+values (1, 1000.00, 50.00, 1, 3, 5, 2, 3000.00);

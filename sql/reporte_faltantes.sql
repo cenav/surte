@@ -439,3 +439,18 @@ select *
 select cod_art, cant_faltante, stock_requerida, stock, consumo_anual, saldo_op, numero_op
   from vw_articulo
  where cod_art = '180.654FIB';
+
+select *
+  from pr_ot
+ where extract(year from fecha) = 2022
+   and cant_prog != 0;
+
+-- cant_prog
+select *
+  from pr_ot
+ where numero = 785731;
+
+-- rendimiento, cant_formula
+select *
+  from pr_ot_det
+ where ot_numero = 785731;
