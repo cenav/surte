@@ -42,12 +42,14 @@ select o.numero, o.estado, o.fecha, f.cod_art, f.cod_for as embalaje, f.canti as
    and o.estado = '1'
    and a.cod_lin between '800' and '899'
    and length(a.cod_lin) = 3
-   and a.cod_lin not in ('840', '855', '871', '875', '880', '896')
- order by cod_art;
+   and a.cod_lin not in ('840', '855', '871', '875', '880', '896');
 
-select *
+select numero, estado, fecha, cod_art, embalaje, rendimiento, requerimiento, requerimiento_total
+     , stock, stock_seguridad, prom_ultimos_meses
   from vw_planeamiento_embalaje
  where numero = 412357;
+
+select * from vw_planeamiento_embalaje;
 
 select *
   from vw_stock_almacen
@@ -69,3 +71,7 @@ select *
 select *
   from pcformulas
  where cod_for = 'DUR 230.230';
+
+select *
+  from vendedores
+ order by cod_vendedor;

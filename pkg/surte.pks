@@ -1,4 +1,4 @@
-create or replace package pevisa.surte as
+create or replace package surte as
   procedure por_item(
     p_pais     varchar2 default null
   , p_vendedor varchar2 default null
@@ -6,15 +6,7 @@ create or replace package pevisa.surte as
   , p_empaque  varchar2 default null
   , p_es_juego pls_integer default null
   , p_orden    pls_integer default 1
-  );
-
-  procedure manual(
-    p_pais     varchar2 default null
-  , p_vendedor varchar2 default null
-  , p_dias     pls_integer default null
-  , p_empaque  varchar2 default null
-  , p_es_juego pls_integer default null
-  , p_orden    pls_integer default 1
+  , p_es_nuevo    pls_integer default null
   );
 
   procedure emite_sao(
@@ -27,7 +19,10 @@ create or replace package pevisa.surte as
 
   function total_impreso return number;
 
+  function total_impreso(
+    p_color varchar2
+  ) return number;
+
   function total_surtir return number;
 
 end surte;
-/

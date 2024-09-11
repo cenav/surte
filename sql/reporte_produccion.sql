@@ -40,26 +40,6 @@ select p.cod_cliente, p.nom_cliente
 
 select * from vw_surte_jgo;
 
--- CREATE USER ksiguenas PROFILE 'profile_usuario_sig';
-alter user pruebas account unlock;
-
-
-alter user oquintana account lock;
-
-
-alter user pruebas identified by "pevisa.123";
-
-
-alter user pruebas password expire;
-
-
-grant select any table, insert any table, delete any table, update any table to asocial;
-
--- Account locked
-select username, account_status, created, lock_date, expiry_date
-  from dba_users
- where username like 'PRUEBAS';
-
 select *
   from tmp_surte_jgo
  where nro_pedido = 15604;
@@ -68,3 +48,46 @@ select *
   from vw_surte_jgo
  where nro_pedido = 15604
    and itm_pedido = 15;
+
+-- prioridad marcada
+select *
+  from view_pedidos_pendientes_38
+ where exists(
+   select 1
+     from pr_embarques p
+          join pr_programa_embarques_id i
+               on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
+    where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+   )
+   and id_pedido = 16417;
+
+-- prioridad marcada
+select *
+  from view_pedidos_pendientes_38
+ where exists(
+   select 1
+     from pr_embarques p
+          join pr_programa_embarques_id i
+               on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
+    where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+   )
+   and id_pedido = 16417;
+
+select *
+  from pr_embarques
+ where id_pedido = 16417;
+
+select *
+  from pr_programa_embarques_id
+ where estado = 1;
+
+select *
+  from pr_programa_embarques_id
+ where ano = 2024
+   and mes = 8;
+
+select *
+  from pr_embarques
+ where ano_embarque = 2024
+   and mes_embarque = 8;
+

@@ -1,4 +1,4 @@
-create or replace package body pevisa.surte as
+create or replace package body surte as
   gc_scope_prefix constant varchar2(31) := lower($$plsql_unit) || '.';
 
   bulk_errors exception;
@@ -14,6 +14,7 @@ create or replace package body pevisa.surte as
   , p_empaque  varchar2 default null
   , p_es_juego pls_integer default null
   , p_orden    pls_integer default 1
+  , p_es_nuevo    pls_integer default null
   ) is
     g_stocks    surte_stock.aat;
     g_explosion surte_formula.master_aat;
@@ -176,7 +177,7 @@ create or replace package body pevisa.surte as
         l_stock_actual := surte_stock.actual(l_codart, g_stocks);
         p_juego.piezas(j).stock_actual := l_stock_actual;
         p_juego.piezas(j).cant_final :=
-              p_juego.calculo.min_cant_partir * p_juego.piezas(j).rendimiento;
+            p_juego.calculo.min_cant_partir * p_juego.piezas(j).rendimiento;
         if p_juego.piezas(j).es_sao = 0 or
            (p_juego.piezas(j).es_sao = 1 and l_stock_actual >= p_juego.piezas(j).cant_final)
         then
@@ -250,7 +251,7 @@ create or replace package body pevisa.surte as
               p_juego.piezas(j).saos(k).cod_sao
             , least(l_stock, p_juego.piezas(j).saos(k).cantidad)
             , g_stocks
-            );
+          );
           if l_stock >= p_juego.piezas(j).saos(k).cantidad then
             p_juego.piezas(j).saos(k).tiene_stock_itm := surte_util.gc_true;
             p_juego.piezas(j).saos(k).id_color := surte_color.gc_completo;
@@ -334,7 +335,7 @@ create or replace package body pevisa.surte as
               p_juegos(i).piezas(j)
             , surte_formula.formula(g_explosion, p_juegos(i).piezas(j).cod_art)
             , g_stocks
-            );
+          );
         end loop;
         surte_scanner.analiza(p_juegos(i), g_stocks, g_param);
         -- despues del analisis toma una opcion
@@ -457,10 +458,10 @@ create or replace package body pevisa.surte as
       when bulk_errors then
         for i in 1 .. sql%bulk_exceptions.count loop
           logger.log(
-                'OA: ' || p_juegos_tmp(sql%bulk_exceptions(i).error_index).ot_numero ||
-                ' Articulo: ' || p_juegos_tmp(sql%bulk_exceptions(i).error_index).cod_jgo ||
-                ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
-            );
+              'OA: ' || p_juegos_tmp(sql%bulk_exceptions(i).error_index).ot_numero ||
+              ' Articulo: ' || p_juegos_tmp(sql%bulk_exceptions(i).error_index).cod_jgo ||
+              ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
+          );
         end loop;
     end;
 
@@ -476,11 +477,11 @@ create or replace package body pevisa.surte as
       when bulk_errors then
         for i in 1 .. sql%bulk_exceptions.count loop
           logger.log(
-                'pedido: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).nro_pedido ||
-                ' item: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).itm_pedido ||
-                ' pza: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).cod_pza ||
-                ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
-            );
+              'pedido: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).nro_pedido ||
+              ' item: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).itm_pedido ||
+              ' pza: ' || p_piezas_tmp(sql%bulk_exceptions(i).error_index).cod_pza ||
+              ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
+          );
         end loop;
     end;
 
@@ -496,12 +497,12 @@ create or replace package body pevisa.surte as
       when bulk_errors then
         for i in 1 .. sql%bulk_exceptions.count loop
           logger.log(
-                'pedido: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).nro_pedido ||
-                ' item: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).itm_pedido ||
-                ' pza: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).cod_pza ||
-                ' sao: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).cod_sao ||
-                ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
-            );
+              'pedido: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).nro_pedido ||
+              ' item: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).itm_pedido ||
+              ' pza: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).cod_pza ||
+              ' sao: ' || p_saos_tmp(sql%bulk_exceptions(i).error_index).cod_sao ||
+              ' Err: ' || sqlerrm(sql%bulk_exceptions(i).error_code * -1)
+          );
         end loop;
     end;
 
@@ -523,10 +524,10 @@ create or replace package body pevisa.surte as
         from tmp_surte_jgo j
        where j.id_color = surte_color.gc_reserva
          and not exists(
-           select 1
-             from reserva_surtimiento r
-            where j.nro_pedido = r.pedido_nro
-              and j.itm_pedido = r.pedido_itm
+         select 1
+           from reserva_surtimiento r
+          where j.nro_pedido = r.pedido_nro
+            and j.itm_pedido = r.pedido_itm
          );
     exception
       when dup_val_on_index then null;
@@ -547,7 +548,7 @@ create or replace package body pevisa.surte as
       --       dbms_output.put_line('init ' || (dbms_utility.get_cpu_time - l_start_time));
 --       l_start_time := dbms_utility.get_cpu_time;
       l_juegos :=
-          surte_loader.crea_coleccion(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden);
+          surte_loader.crea_coleccion(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden, p_es_nuevo);
       --       dbms_output.put_line('crea_coleccion ' || (dbms_utility.get_cpu_time - l_start_time));
 --       l_start_time := dbms_utility.get_cpu_time;
       consume_stock(l_juegos);
@@ -561,53 +562,6 @@ create or replace package body pevisa.surte as
       guarda_reserva();
       commit;
     end;
-  end;
-
-  procedure guarda_manual is
-  begin
-    if true then
-      insert into tmp_surte_jgo_manual( nro_pedido, itm_pedido, cod_cliente, nom_cliente, fch_pedido
-                                      , ot_tipo, ot_serie, ot_numero, cod_jgo, cant_prog
-                                      , cant_surtir, valor, valor_surtir, id_color, ranking)
-      select nro_pedido, itm_pedido, cod_cliente, nom_cliente, fch_pedido
-           , ot_tipo, ot_serie, ot_numero, cod_jgo, cant_prog
-           , case when id_color in ('C', 'P') then coalesce(cant_partir, cant_prog) end, valor
-           , valor_surtir, id_color, ranking
-        from tmp_surte_jgo
-       where es_prioritario = 0
-          or cod_jgo in (
-         select cod_art
-           from tmp_selecciona_articulo
-         );
-
-      insert into tmp_surte_pza_manual( nro_pedido, itm_pedido, cod_pza, cantidad, rendimiento
-                                      , stock_actual, cant_final, linea, es_importado
-                                      , tiene_stock_itm, es_sao, es_armado, es_reserva, id_color)
-      select nro_pedido, itm_pedido, cod_pza, cantidad, rendimiento
-           , stock_actual, cant_final, linea, es_importado
-           , tiene_stock_itm, es_sao, es_armado, es_reserva, id_color
-        from tmp_surte_pza p
-       where exists(
-                 select 1
-                   from tmp_surte_jgo_manual j
-                  where j.nro_pedido = p.nro_pedido
-                    and j.itm_pedido = p.itm_pedido
-               );
-    end if;
-  end;
-
-  procedure manual(
-    p_pais     varchar2 default null
-  , p_vendedor varchar2 default null
-  , p_dias     pls_integer default null
-  , p_empaque  varchar2 default null
-  , p_es_juego pls_integer default null
-  , p_orden    pls_integer default 1
-  ) is
-  begin
-    por_item(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden);
-    guarda_manual();
-    commit;
   end;
 
   procedure emite_sao(
@@ -644,8 +598,18 @@ create or replace package body pevisa.surte as
   begin
     select nvl(sum(valor), 0)
       into l_total
+      from vw_ordenes_impresas_pendientes;
+
+    return l_total;
+  end;
+
+  function total_impreso(p_color varchar2) return number is
+    l_total number := 0;
+  begin
+    select nvl(sum(valor), 0)
+      into l_total
       from vw_ordenes_impresas_pendientes
-     where color = 'GREEN';
+     where color = p_color;
 
     return l_total;
   end;
@@ -655,4 +619,3 @@ create or replace package body pevisa.surte as
     return total_imprimir() + total_impreso();
   end;
 end surte;
-/

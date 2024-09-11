@@ -56,16 +56,7 @@ create or replace package pevisa.surte_reporte as
   type detalle_aat is table of detalle_t index by binary_integer;
   type dias_aat is table of dias_t index by binary_integer;
 
-  function faltante_detalle(
-    p_cliente    varchar2
-  , p_simulacion varchar2
-  , p_urgente    varchar2
-  , p_faltante   number
-  , p_valor      number
-  , p_dias       number
-  ) return detalle_aat;
-
-  function faltante_cliente(
+  function faltante(
     p_cliente    varchar2
   , p_simulacion varchar2
   , p_urgente    varchar2
@@ -82,6 +73,15 @@ create or replace package pevisa.surte_reporte as
   , p_valor      number
   , p_dias       number
   ) return resumen_aat;
+
+  function faltante_detalle(
+    p_cliente    varchar2
+  , p_simulacion varchar2
+  , p_urgente    varchar2
+  , p_faltante   number
+  , p_valor      number
+  , p_dias       number
+  ) return detalle_aat;
 
   function faltante_resumen_sao(
     p_cliente    varchar2
@@ -101,16 +101,15 @@ create or replace package pevisa.surte_reporte as
   , p_dias       number
   ) return dias_aat;
 
-  procedure guarda_detalle(
+
+  function importados(
     p_cliente    varchar2
   , p_simulacion varchar2
   , p_urgente    varchar2
   , p_faltante   number
   , p_valor      number
   , p_dias       number
-  );
-
-  procedure guarda_detalle;
+  ) return dias_aat;
 
 end surte_reporte;
 /

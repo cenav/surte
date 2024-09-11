@@ -229,20 +229,19 @@ select cod_cliente, nom_cliente, nro_pedido, fch_pedido, ot_tipo, ot_serie, ot_n
                over (partition by cod_cliente, art_cod_art order by fch_pedido) as stock_acumulado_fch
       from vw_ordenes_pedido_pendiente
      where exists(
-               select 1
-                 from view_pedidos_pendientes_38
-                where
-                    view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
-                  and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
-                  and exists(
-                    select 1
-                      from pr_embarques p
-                           join pr_programa_embarques_id i
-                                on p.ano_embarque = i.ano and p.mes_embarque = i.mes and
-                                   i.estado = 1
-                     where p.id_pedido = view_pedidos_pendientes_38.id_pedido
-                  )
-             )
+       select 1
+         from view_pedidos_pendientes_38
+        where view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
+          and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
+          and exists(
+          select 1
+            from pr_embarques p
+                 join pr_programa_embarques_id i
+                      on p.ano_embarque = i.ano and p.mes_embarque = i.mes and
+                         i.estado = 1
+           where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+          )
+       )
     )
      , calculo as (
     select d.cod_cliente, d.nombre, pedido, d.fch_pedido, nuot_tipoot_codigo, nuot_serie, numero
@@ -400,21 +399,20 @@ select *
                over (partition by art_cod_art order by es_juego desc, valor desc) as stock_acum
       from vw_ordenes_pedido_pendiente
      where exists(
-             -- prioridades marcadas (que si se atienden)
-               select 1
-                 from view_pedidos_pendientes_38
-                where
-                    view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
-                  and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
-                  and exists(
-                    select 1
-                      from pr_embarques p
-                           join pr_programa_embarques_id i
-                                on p.ano_embarque = i.ano and p.mes_embarque = i.mes and
-                                   i.estado = 1
-                     where p.id_pedido = view_pedidos_pendientes_38.id_pedido
-                  )
-             )
+       -- prioridades marcadas (que si se atienden)
+       select 1
+         from view_pedidos_pendientes_38
+        where view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
+          and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
+          and exists(
+          select 1
+            from pr_embarques p
+                 join pr_programa_embarques_id i
+                      on p.ano_embarque = i.ano and p.mes_embarque = i.mes and
+                         i.estado = 1
+           where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+          )
+       )
     )
      , calculo as (
     select d.cod_cliente, d.nombre, pedido, d.pedido_item, d.fch_pedido, nuot_tipoot_codigo
@@ -462,38 +460,38 @@ select cod_cliente, nombre, fch_pedido, pedido, pedido_item, numero, nuot_serie,
      , stock, tiene_stock, tiene_stock_ot, tiene_stock_item, impreso, fch_impresion, es_juego
   from vw_ordenes_pedido_pendiente
  where exists(
-         -- prioridades marcadas (que si se atienden)
-           select 1
-             from view_pedidos_pendientes_38
-            where view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
-              and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
-              and exists(
-                select 1
-                  from pr_embarques p
-                       join pr_programa_embarques_id i
-                            on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
-                 where p.id_pedido = view_pedidos_pendientes_38.id_pedido
-              )
-         )
+   -- prioridades marcadas (que si se atienden)
+   select 1
+     from view_pedidos_pendientes_38
+    where view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
+      and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
+      and exists(
+      select 1
+        from pr_embarques p
+             join pr_programa_embarques_id i
+                  on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
+       where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+      )
+   )
  order by es_juego desc, valor desc;
 
 -- orden inicial para consumo de stock
 select nombre, pedido, pedido_item, formu_art_cod_art, valor, es_juego
   from vw_ordenes_pedido_pendiente
  where exists(
-         -- prioridades marcadas (que si se atienden)
-           select 1
-             from view_pedidos_pendientes_38
-            where view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
-              and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
-              and exists(
-                select 1
-                  from pr_embarques p
-                       join pr_programa_embarques_id i
-                            on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
-                 where p.id_pedido = view_pedidos_pendientes_38.id_pedido
-              )
-         )
+   -- prioridades marcadas (que si se atienden)
+   select 1
+     from view_pedidos_pendientes_38
+    where view_pedidos_pendientes_38.cod_cliente = vw_ordenes_pedido_pendiente.cod_cliente
+      and view_pedidos_pendientes_38.id_pedido = vw_ordenes_pedido_pendiente.pedido
+      and exists(
+      select 1
+        from pr_embarques p
+             join pr_programa_embarques_id i
+                  on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
+       where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+      )
+   )
  group by pedido, pedido_item, formu_art_cod_art, valor, nombre, es_juego
  order by es_juego desc, valor desc;
 
@@ -537,12 +535,12 @@ select nombre, pedido, pedido_item, formu_art_cod_art, valor, es_juego
 select *
   from view_pedidos_pendientes_38
  where exists(
-           select 1
-             from pr_embarques p
-                  join pr_programa_embarques_id i
-                       on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
-            where p.id_pedido = view_pedidos_pendientes_38.id_pedido
-         );
+   select 1
+     from pr_embarques p
+          join pr_programa_embarques_id i
+               on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
+    where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+   );
 
 select * from view_prioridades_pendientes_38;
 select * from view_pedidos_pendientes_38;
@@ -686,7 +684,7 @@ end;
          , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado
          , v.impreso
          , v.fch_impresion, v.es_juego, v.es_importado
-         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
+         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end as oa
          , dense_rank() over (
       order by case when p.prioritario = 1 then v.es_prioritario end desc
         , case when trunc(sysdate) - v.fch_pedido > :p_dias then v.fch_pedido end
@@ -698,8 +696,13 @@ end;
            join param_surte p on p.id_param = 1
           --      where (v.pais = :p_pais or :p_pais is null)
 --        and (v.vendedor = :p_vendedor or :p_vendedor is null)
-          and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-               not exists(select * from tmp_selecciona_cliente))
+          and (exists(
+            select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente
+            ) or
+               not exists(
+                 select *
+                   from tmp_selecciona_cliente
+                 ))
 --          where numero in (801975)
     )
 select *
@@ -845,7 +848,7 @@ select * from param_surte;
          , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado
          , v.impreso
          , v.fch_impresion, v.es_juego, v.es_importado, v.pais, v.es_prioritario
-         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
+         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end as oa
          , dense_rank() over (
       order by case when p.prioritario = 1 then v.es_prioritario end desc
 --         , case when trunc(sysdate) - v.fch_pedido > :p_dias then 1 else 0 end desc
@@ -862,17 +865,22 @@ select * from param_surte;
          and (v.vendedor = :p_vendedor or :p_vendedor is null)
          and (v.empaque = :p_empaque or :p_empaque is null)
          and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
-         and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-              not exists(select * from tmp_selecciona_cliente)))
+         and (exists(
+           select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente
+           ) or
+              not exists(
+                select *
+                  from tmp_selecciona_cliente
+                )))
        )
        and v.impreso = 'NO'
 --        and pedido = 14660
 --        and pedido_item = 135
        and exists(
-         select *
-           from pedidos_test t
-          where v.pedido = t.numero
-            and v.pedido_item = t.item
+       select *
+         from pedidos_test t
+        where v.pedido = t.numero
+          and v.pedido_item = t.item
        )
     )
 select *
@@ -1006,7 +1014,7 @@ declare
          , case
              when lag(f.cod_art) over (order by null) = f.cod_art then null
              else f.cod_art
-           end quiebre
+           end as quiebre
       from pcformulas f
            join articul m on f.cod_art = m.cod_art
            join articul a on f.cod_for = a.cod_art
@@ -1035,7 +1043,7 @@ declare
   ) is
   begin
     dbms_output.put_line(
-          name_in
+        name_in
           || ' elapsed CPU time: '
           || to_char(dbms_utility.get_cpu_time - l_start));
   end show_elapsed;
@@ -1078,7 +1086,8 @@ declare
 begin
   l_idx := 'SA SB95353-4';
   l_explosion := surte_formula.explosion(l_idx);
-  if l_explosion.exists(l_idx) then
+  if l_explosion.exists(l_idx
+    ) then
     dbms_output.put_line('SI');
   else
     dbms_output.put_line('NO');
@@ -1261,7 +1270,7 @@ select *
          , v.impreso
          , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
          , v.es_reservado, v.es_simulacion
-         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
+         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end as oa
          , dense_rank() over (
       order by
         v.es_reservado desc
@@ -1301,11 +1310,21 @@ select *
          and (v.empaque = :p_empaque or :p_empaque is null)
          and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
          and (v.es_juego = :p_es_juego or :p_es_juego is null)
-         and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-              not exists(select * from tmp_selecciona_cliente))
+         and (exists(
+           select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente
+           ) or
+              not exists(
+                select *
+                  from tmp_selecciona_cliente
+                ))
          and
-           (exists(select * from tmp_selecciona_articulo t where v.formu_art_cod_art = t.cod_art) or
-            not exists(select * from tmp_selecciona_articulo))
+           (exists(
+             select * from tmp_selecciona_articulo t where v.formu_art_cod_art = t.cod_art
+             ) or
+            not exists(
+              select *
+                from tmp_selecciona_articulo
+              ))
               )
        )
        and v.impreso = 'NO'
@@ -1387,3 +1406,164 @@ select 'ARMAR' as dsc, 'A' as id
  union
 select 'PARTIR' as dsc, 'P' as id
   from dual;
+
+
+  with detalle as (
+    select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
+         , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
+         , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni
+         , v.valor
+         , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado
+         , v.impreso
+         , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
+         , v.es_reservado, v.es_simulacion
+         , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end as oa
+         , dense_rank() over (
+      order by
+        v.es_reservado desc
+        , case when p.prioritario = 1 then v.es_prioritario end desc
+        , case when p.prioritario = 1 then v.orden_prioritario end
+--         , case when trunc(sysdate) - v.fch_pedido > :p_dias then 1 else 0 end desc
+        , case :p_orden
+            when 1 then
+              case when v.valor > p.valor_item then 1 else 0 end
+          end desc
+        , case :p_orden
+            when 1 then
+              v.es_juego
+          end
+        , case :p_orden
+            when 1 then
+              v.valor
+            when 2 then
+              v.total_art
+          end desc
+        , case :p_orden
+            when 1 then
+              v.es_juego
+          end
+        , case :p_orden
+            when 2 then
+              v.fch_pedido
+          end
+        , v.pedido
+        , v.pedido_item
+      ) as ranking
+      from vw_ordenes_pedido_pendiente v
+           join param_surte p on p.id_param = 1
+     where ((v.es_prioritario = 1 and :p_dias < 120)
+       or ((v.pais = :p_pais or :p_pais is null)
+         and (v.vendedor = :p_vendedor or :p_vendedor is null)
+         and (v.empaque = :p_empaque or :p_empaque is null)
+         and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
+         and (v.es_juego = :p_es_juego or :p_es_juego is null)
+         and (exists(
+           select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente
+           ) or
+              not exists(
+                select *
+                  from tmp_selecciona_cliente
+                ))
+         and (exists(
+           select * from tmp_selecciona_articulo t where v.formu_art_cod_art = t.cod_art
+           ) or
+              not exists(
+                select *
+                  from tmp_selecciona_articulo
+                ))
+              )
+       )
+       and v.impreso = 'NO'
+       and pedido = 16500
+--            and pedido_item = 135
+    )
+select *
+  from detalle d
+ order by ranking, oa;
+
+select id_pedido
+  from view_pedidos_pendientes_38
+ where exists (
+   select 1
+     from pr_embarques p
+          join pr_programa_embarques_id i
+               on p.ano_embarque = i.ano
+                 and p.mes_embarque = i.mes
+                 and i.estado = 1
+    where p.id_pedido =
+          view_pedidos_pendientes_38.id_pedido
+   )
+   and id_pedido = 16500;
+
+select *
+  from pr_embarques
+ where id_pedido = 16500;
+
+select *
+  from pr_programa_embarques_id
+ where ano = 2024
+   and mes = 8;
+
+select *
+  from view_pedidos_pendientes_38
+ where id_pedido = 16500;
+
+select * from grupo_cliente;
+
+select * from grupo_cliente_cliente;
+
+select *
+  from exclientes
+ where cod_cliente in (
+                       '990937', '996057'
+   );
+
+select * from color_surtimiento;
+
+select * from tmp_surte_pza;
+
+  with prueba as (
+    select id_pedido
+      from view_pedidos_pendientes_38
+     where exists(
+       select 1
+         from pr_embarques p
+              join pr_programa_embarques_id i
+                   on p.ano_embarque = i.ano and p.mes_embarque = i.mes and i.estado = 1
+        where p.id_pedido = view_pedidos_pendientes_38.id_pedido
+       )
+     union
+    select id_pedido
+      from view_pedidos_pendientes_38
+     where cod_cliente in (
+       select gcc.cod_cliente
+         from grupo_cliente gc
+              join grupo_cliente_cliente gcc on gc.cod_grupo = gcc.cod_grupo
+        where gc.es_simulacion = 1
+       )
+    )
+select *
+  from prueba
+ where id_pedido in (16417, 16446);
+
+select *
+  from view_pedidos_pendientes_38
+ where id_pedido in (16417, 16446);
+
+select *
+  from view_pedidos_pendientes_38
+ where cod_cliente = '998121';
+
+select id_pedido
+  from view_pedidos_pendientes_38
+ where cod_cliente in (
+   select gcc.cod_cliente
+     from grupo_cliente gc
+          join grupo_cliente_cliente gcc on gc.cod_grupo = gcc.cod_grupo
+    where gc.es_simulacion = 1
+   );
+
+select *
+  from grupo_cliente gc
+       join grupo_cliente_cliente gcc on gc.cod_grupo = gcc.cod_grupo
+ where gc.es_simulacion = 1;
