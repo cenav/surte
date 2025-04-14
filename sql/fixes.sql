@@ -8,7 +8,7 @@
          , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado
          , v.impreso
          , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
-         , v.es_reservado, v.es_simulacion
+         , v.es_reservado, v.es_simulacion, v.es_nuevo
          , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end as oa
          , dense_rank() over (
       order by
@@ -49,6 +49,7 @@
          and (v.empaque = :p_empaque or :p_empaque is null)
          and (trunc(sysdate) - v.fch_pedido > :p_dias or :p_dias is null)
          and (v.es_juego = :p_es_juego or :p_es_juego is null)
+         and (v.es_nuevo = :p_es_nuevo or :p_es_nuevo is null or v.es_prioritario = 1)
          and (exists(
            select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente
            ) or
@@ -66,7 +67,7 @@
               )
        )
        and v.impreso = 'NO'
-       and pedido = 16417
+--            and pedido = 14660
 --            and pedido_item = 135
     )
 select *
@@ -107,3 +108,48 @@ select * from grupo_cliente_cliente;
 select *
   from expedidos
  where numero in (16417, 16446);
+
+-- cliente nuevo
+select case
+         when v.nombre_corp is not null then v.nombre_corp
+         else e.cod_cliente
+       end
+  as cod_corporativo
+     , case
+         when v.nombre_corp is not null then v.nombre_corp
+         when c.abreviada is not null then c.abreviada
+         else c.nombre
+       end
+  as nombre
+     , count(*) as compras
+  from expedidos e
+       left join exclientes_varios v
+                 on e.cod_cliente = v.cod_cliente
+       left join exclientes c on e.cod_cliente = c.cod_cliente
+ where e.estado != '9'
+   and e.fecha > add_months(sysdate, - (12 * 3))
+having count(*) <= 2
+ group by case
+            when v.nombre_corp is not null then v.nombre_corp
+            else e.cod_cliente
+          end
+        , case
+            when v.nombre_corp is not null then v.nombre_corp
+            when c.abreviada is not null then c.abreviada
+            else c.nombre
+          end
+ order by nombre;
+
+select *
+  from expedidos e
+       left join exclientes_varios v
+                 on e.cod_cliente = v.cod_cliente
+       left join exclientes c on e.cod_cliente = c.cod_cliente
+ where e.estado != '9'
+   and e.fecha > add_months(sysdate, - (12 * 3))
+   and e.cod_cliente = '998045';
+
+select * from exclientes_varios;
+
+-- 998106
+-- 998107

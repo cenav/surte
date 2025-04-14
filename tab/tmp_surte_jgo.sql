@@ -52,6 +52,15 @@ alter table pevisa.tmp_surte_jgo
       primary key
         (nro_pedido, itm_pedido)
         using index pevisa.pk_tmp_surte_jgo
-        enable validate);
+        enable validate
+    );
+
+grant update on pevisa.tmp_surte_jgo to privilegios_actualiza_pvs;
+
+grant delete on pevisa.tmp_surte_jgo to privilegios_elimina_pvs;
+
+grant insert on pevisa.tmp_surte_jgo to privilegios_inserta_pvs;
+
+grant select on pevisa.tmp_surte_jgo to privilegios_lectura_pvs;
 
 grant delete, insert, select, update on pevisa.tmp_surte_jgo to sig_roles_invitado;

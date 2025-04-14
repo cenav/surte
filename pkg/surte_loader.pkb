@@ -1,4 +1,4 @@
-create or replace package body        surte_loader as
+create or replace package body surte_loader as
 
   cursor pedidos_cur(
     p_pais varchar2
@@ -13,16 +13,19 @@ create or replace package body        surte_loader as
       with detalle as (
         select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
              , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
-             , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni, v.valor
-             , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado, v.impreso
-             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
-             , v.es_reservado, v.es_simulacion, v.es_nuevo
-             , case when lag(v.numero) over (order by null) = v.numero then null else v.numero end oa
+             , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni
+             , v.valor, v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item
+             , v.tiene_importado, v.impreso, v.fch_impresion, v.es_juego, v.es_importado
+             , v.es_prioritario, v.es_sao, v.cant_prog, v.es_reservado, v.es_simulacion, v.es_nuevo
+             , case
+                 when lag(v.numero) over (order by null) = v.numero then null
+                 else v.numero
+               end as oa
              , dense_rank() over (
           order by
-            v.es_reservado desc
-            , case when p.prioritario = 1 then v.es_prioritario end desc
-            , case when p.prioritario = 1 then v.orden_prioritario end
+            case when p.prioritario = 1 then v.es_prioritario end desc --> Autozone siempre primero
+            , case when p.prioritario = 1 then v.orden_prioritario end--> Dentro del Autozone ordena
+            , v.es_reservado desc
 --         , case when trunc(sysdate) - v.fch_pedido > :p_dias then 1 else 0 end desc
             , case p_orden
                 when 1 then
@@ -58,10 +61,20 @@ create or replace package body        surte_loader as
              and (trunc(sysdate) - v.fch_pedido > p_dias or p_dias is null)
              and (v.es_juego = p_es_juego or p_es_juego is null)
              and (v.es_nuevo = p_es_nuevo or p_es_nuevo is null or v.es_prioritario = 1)
-             and (exists(select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente) or
-                  not exists(select * from tmp_selecciona_cliente))
-             and (exists(select * from tmp_selecciona_articulo t where v.formu_art_cod_art = t.cod_art) or
-                  not exists(select * from tmp_selecciona_articulo))
+             and (exists (
+               select * from tmp_selecciona_cliente t where v.cod_cliente = t.cod_cliente
+               ) or
+                  not exists (
+                    select *
+                      from tmp_selecciona_cliente
+                    ))
+             and (exists (
+               select * from tmp_selecciona_articulo t where v.formu_art_cod_art = t.cod_art
+               ) or
+                  not exists (
+                    select *
+                      from tmp_selecciona_articulo
+                    ))
                   )
            )
            and v.impreso = 'NO'
@@ -133,11 +146,13 @@ create or replace package body        surte_loader as
   , p_empaque  varchar2 default null
   , p_es_juego pls_integer default null
   , p_orden    pls_integer default 1
-  , p_es_nuevo    pls_integer default null
+  , p_es_nuevo pls_integer default null
   ) return surte_struct.juegos_aat is
     l_juegos surte_struct.juegos_aat;
   begin
-    for r_pedido in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden, p_es_nuevo) loop
+    for r_pedido in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden,
+                    p_es_nuevo)
+    loop
       -- para el primer quiebre de grupo (item pedido)
       -- normaliza la data
       if r_pedido.oa is not null then
