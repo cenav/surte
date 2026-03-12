@@ -14,12 +14,13 @@ create or replace package body surte as
   , p_empaque  varchar2 default null
   , p_es_juego pls_integer default null
   , p_orden    pls_integer default 1
-  , p_es_nuevo    pls_integer default null
+  , p_es_nuevo pls_integer default null
   ) is
     g_stocks    surte_stock.aat;
     g_explosion surte_formula.master_aat;
     g_param     param_surte%rowtype;
     g_colores   surte_color.aat;
+--     g_embalaje  surte_embalaje.aat;
 
     procedure init is
     begin
@@ -117,6 +118,7 @@ create or replace package body surte as
       p_juego.valor_simulado := null;
       p_juego.partir_ot := surte_util.gc_false;
       p_juego.id_color := surte_color.gc_faltante;
+      --> agregar linea para que reconozca embalajes
       for j in 1 .. p_juego.piezas.count loop
         l_codart := p_juego.piezas(j).cod_art;
         l_stock_actual := surte_stock.actual(l_codart, g_stocks);
@@ -132,6 +134,9 @@ create or replace package body surte as
         elsif l_stock_actual >= p_juego.piezas(j).cantidad then
           p_juego.piezas(j).tiene_stock_itm := surte_util.gc_true;
           p_juego.piezas(j).id_color := surte_color.gc_completo;
+        elsif p_juego.piezas(j).es_embalaje = surte_util.gc_true then
+          p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
+          p_juego.piezas(j).id_color := surte_color.gc_embalaje;
         else
           p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
           p_juego.piezas(j).id_color := surte_color.gc_faltante;
@@ -234,6 +239,9 @@ create or replace package body surte as
           p_juego.piezas(j).tiene_stock_itm := surte_util.gc_true;
           p_juego.piezas(j).id_color := surte_color.gc_completo;
           surte_stock.reduce(l_codart, least(l_stock, p_juego.piezas(j).cantidad), g_stocks);
+        elsif p_juego.piezas(j).es_embalaje = surte_util.gc_true then
+          p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
+          p_juego.piezas(j).id_color := surte_color.gc_embalaje;
         else
           p_juego.piezas(j).stock_actual := l_stock;
           p_juego.piezas(j).saldo_stock := l_stock - least(l_stock, p_juego.piezas(j).cantidad);
@@ -314,6 +322,59 @@ create or replace package body surte as
       end loop;
     end;
 
+
+    procedure falta_embalaje(
+      p_juego in out nocopy surte_struct.juego_rt
+    ) is
+      l_codart       surte_util.t_articulo;
+      l_stock_actual number := 0;
+    begin
+      p_juego.tiene_stock_ot := 'NO';
+      p_juego.valor_surtir := null;
+      p_juego.valor_simulado := null;
+      p_juego.partir_ot := surte_util.gc_false;
+      p_juego.id_color := surte_color.gc_embalaje;
+      for j in 1 .. p_juego.piezas.count loop
+        l_codart := p_juego.piezas(j).cod_art;
+        l_stock_actual := surte_stock.actual(l_codart, g_stocks);
+        p_juego.piezas(j).stock_actual := l_stock_actual;
+        p_juego.piezas(j).saldo_stock := null;
+        p_juego.piezas(j).cant_final := null;
+        if p_juego.piezas(j).es_sao = surte_util.gc_true and p_juego.piezas(j).calculo.armar then
+          p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
+          p_juego.piezas(j).id_color := surte_color.gc_armar;
+        elsif l_stock_actual >= p_juego.piezas(j).cantidad then
+          p_juego.piezas(j).tiene_stock_itm := surte_util.gc_true;
+          p_juego.piezas(j).id_color := surte_color.gc_completo;
+        elsif l_stock_actual < p_juego.piezas(j).cantidad
+              and p_juego.piezas(j).es_importado = surte_util.gc_true then
+          p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
+          p_juego.piezas(j).id_color := surte_color.gc_importado;
+        elsif p_juego.piezas(j).es_embalaje = surte_util.gc_true then
+          p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
+          p_juego.piezas(j).id_color := surte_color.gc_embalaje;
+        else
+          p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
+          p_juego.piezas(j).id_color := surte_color.gc_faltante;
+        end if;
+        for k in 1 .. p_juego.piezas(j).saos.count loop
+          l_codart := p_juego.piezas(j).saos(k).cod_sao;
+          l_stock_actual := surte_stock.actual(l_codart, g_stocks);
+          p_juego.piezas(j).saos(k).stock_actual := l_stock_actual;
+          p_juego.piezas(j).saos(k).saldo_stock := null;
+          p_juego.piezas(j).saos(k).cant_final := null;
+          if l_stock_actual >= p_juego.piezas(j).saos(k).cantidad then
+            p_juego.piezas(j).saos(k).tiene_stock_itm := surte_util.gc_true;
+            p_juego.piezas(j).saos(k).id_color := surte_color.gc_completo;
+          else
+            p_juego.piezas(j).saos(k).tiene_stock_itm := surte_util.gc_false;
+            p_juego.piezas(j).saos(k).id_color := surte_color.gc_faltante;
+          end if;
+        end loop;
+      end loop;
+    end;
+
+
     procedure marca_es_armar(
       p_juego in out nocopy surte_struct.juego_rt
     ) is
@@ -348,6 +409,8 @@ create or replace package body surte as
             reserva_stock(p_juegos(i));
           when p_juegos(i).calculo.falta_importado then
             falta_importado(p_juegos(i));
+          when p_juegos(i).calculo.falta_embalaje then
+            falta_embalaje(p_juegos(i));
           else
             falta_stock(p_juegos(i));
         end case;
@@ -548,7 +611,8 @@ create or replace package body surte as
       --       dbms_output.put_line('init ' || (dbms_utility.get_cpu_time - l_start_time));
 --       l_start_time := dbms_utility.get_cpu_time;
       l_juegos :=
-          surte_loader.crea_coleccion(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden, p_es_nuevo);
+          surte_loader.crea_coleccion(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden,
+                                      p_es_nuevo);
       --       dbms_output.put_line('crea_coleccion ' || (dbms_utility.get_cpu_time - l_start_time));
 --       l_start_time := dbms_utility.get_cpu_time;
       consume_stock(l_juegos);
@@ -577,7 +641,9 @@ create or replace package body surte as
     select nvl(sum(valor_surtir), 0)
       into l_total
       from vw_surte_jgo
-     where id_color in (surte_color.gc_completo, surte_color.gc_partir);
+     where id_color in (surte_color.gc_completo, surte_color.gc_partir)
+       --quitando el valor de cliente stock.
+       and cod_cliente not in ('998001');
 
     return l_total;
   end;
@@ -588,7 +654,9 @@ create or replace package body surte as
     select nvl(sum(valor_simulado), 0)
       into l_total
       from vw_surte_jgo
-     where id_color in (surte_color.gc_completo, surte_color.gc_partir);
+     where id_color in (surte_color.gc_completo, surte_color.gc_partir)
+       --quitando el valor de cliente stock.
+       and cod_cliente not in ('998001');
 
     return l_total;
   end;
@@ -598,8 +666,9 @@ create or replace package body surte as
   begin
     select nvl(sum(valor), 0)
       into l_total
-      from vw_ordenes_impresas_pendientes;
-
+      from vw_ordenes_impresas_pendientes
+--quitando el valor de cliente stock.
+     where cod_cliente not in ('998001');
     return l_total;
   end;
 
@@ -609,7 +678,9 @@ create or replace package body surte as
     select nvl(sum(valor), 0)
       into l_total
       from vw_ordenes_impresas_pendientes
-     where color = p_color;
+     where color = p_color
+       --quitando el valor de cliente stock.
+       and cod_cliente not in ('998001');
 
     return l_total;
   end;
@@ -619,3 +690,5 @@ create or replace package body surte as
     return total_imprimir() + total_impreso();
   end;
 end surte;
+/
+

@@ -21,25 +21,32 @@ create or replace package body surte_scanner as
   , p_es_sao             number
   , p_precio_unit        number
   , p_min_val_partir     number
+  , p_es_embalaje        number
   ) is
   begin
     p_calc.min_cant_partir := multiplo.inferior(
         least(p_calc.min_cant_partir,
               case
-                when p_es_sao = 1 and multiplo.inferior(p_stock_listo, surte_util.gc_multiplo_partir) = 0 then
+                when p_es_sao = 1 and
+                     multiplo.inferior(p_stock_listo, surte_util.gc_multiplo_partir) = 0 then
                   p_calc.min_cant_partir
                 else
-                  least(p_cant_jgo, greatest(p_stock_listo / p_rendimiento, p_stock_armar / p_rendimiento))
+                  least(p_cant_jgo,
+                        greatest(p_stock_listo / p_rendimiento, p_stock_armar / p_rendimiento))
               end
-          )
+        )
       , surte_util.gc_multiplo_partir
-      );
-    if p_stock_armar < p_cantidad and p_es_sao = 0 then
+                              );
+    if p_stock_armar < p_cantidad and p_es_sao = surte_util.gc_false then
       p_calc.stock_completo := false;
       p_calc.piezas_sin_stock := p_calc.piezas_sin_stock + 1;
     end if;
-    if p_es_importado = 1 and p_stock_armar < p_cantidad and p_es_sao = 0 then
+    if p_es_importado = 1 and p_stock_armar < p_cantidad and p_es_sao = surte_util.gc_false then
       p_calc.falta_importado := true;
+      p_calc.armar := false;
+    end if;
+    if p_es_embalaje = surte_util.gc_true and p_stock_armar < p_cantidad and p_es_sao = surte_util.gc_false then
+      p_calc.falta_embalaje := true;
       p_calc.armar := false;
     end if;
     if multiplo.inferior(p_stock_armar, surte_util.gc_multiplo_partir) = 0 or
@@ -74,7 +81,8 @@ create or replace package body surte_scanner as
         , p_es_sao => c_tratalo_como_pieza
         , p_precio_unit => p_juego.preuni
         , p_min_val_partir => p_param.valor_partir
-        );
+        , p_es_embalaje => c_tratalo_como_pieza
+      );
       modifica_calculo(
           p_calc => p_pieza.calculo
         , p_cant_jgo => p_juego.cant_prog
@@ -86,58 +94,63 @@ create or replace package body surte_scanner as
         , p_es_sao => c_tratalo_como_pieza
         , p_precio_unit => p_juego.preuni
         , p_min_val_partir => p_param.valor_partir
-        );
+        , p_es_embalaje => c_tratalo_como_pieza
+      );
     end loop;
   end;
 
   /*
    public routines
    */
-  procedure analiza(
-    p_juego in out nocopy surte_struct.juego_rt
-  , p_stocks              surte_stock.aat
-  , p_param               param_surte%rowtype
-  ) is
-  begin
-    for i in 1 .. p_juego.piezas.count loop
-      modifica_calculo(
-          p_calc => p_juego.calculo
-        , p_cant_jgo => p_juego.cant_prog
-        , p_cantidad => p_juego.piezas(i).cantidad
-        , p_rendimiento => p_juego.piezas(i).rendimiento
-        , p_stock_listo => 0
-        , p_stock_armar => surte_stock.actual(p_juego.piezas(i).cod_art, p_stocks)
-        , p_es_importado => p_juego.piezas(i).es_importado
-        , p_es_sao => p_juego.piezas(i).es_sao
-        , p_precio_unit => p_juego.preuni
-        , p_min_val_partir => p_param.valor_partir
+
+
+    procedure analiza(
+      p_juego in out nocopy surte_struct.juego_rt
+    , p_stocks              surte_stock.aat
+    , p_param               param_surte%rowtype
+    ) is
+    begin
+      for i in 1 .. p_juego.piezas.count loop
+        modifica_calculo(
+            p_calc => p_juego.calculo
+          , p_cant_jgo => p_juego.cant_prog
+          , p_cantidad => p_juego.piezas(i).cantidad
+          , p_rendimiento => p_juego.piezas(i).rendimiento
+          , p_stock_listo => 0
+          , p_stock_armar => surte_stock.actual(p_juego.piezas(i).cod_art, p_stocks)
+          , p_es_importado => p_juego.piezas(i).es_importado
+          , p_es_sao => p_juego.piezas(i).es_sao
+          , p_precio_unit => p_juego.preuni
+          , p_min_val_partir => p_param.valor_partir
+          , p_es_embalaje => p_juego.piezas(i).es_embalaje
         );
-      if p_juego.piezas(i).es_sao = 1 then
-        analiza_sao(p_juego, p_juego.piezas(i), p_stocks, p_param);
+        if p_juego.piezas(i).es_sao = 1 then
+          analiza_sao(p_juego, p_juego.piezas(i), p_stocks, p_param);
+        end if;
+      end loop;
+
+      if en_rango_para_partir(p_juego.calculo.min_cant_partir, p_juego.cant_prog) then
+        p_juego.calculo.podria_partirse := true;
       end if;
-    end loop;
 
-    if en_rango_para_partir(p_juego.calculo.min_cant_partir, p_juego.cant_prog) then
-      p_juego.calculo.podria_partirse := true;
-    end if;
+      if p_juego.calculo.piezas_sin_stock between 1 and p_param.max_faltante_reserva and
+         p_juego.valor >= p_param.min_valor_reserva and
+         p_juego.es_juego = surte_util.gc_true and
+         not p_juego.calculo.podria_partirse
+      then
+        p_juego.calculo.reserva_stock := true;
+        p_juego.calculo.urgente := true;
+      end if;
 
-    if p_juego.calculo.piezas_sin_stock between 1 and p_param.max_faltante_reserva and
-       p_juego.valor >= p_param.min_valor_reserva and
-       p_juego.es_juego = surte_util.gc_true and
-       not p_juego.calculo.podria_partirse
-    then
-      p_juego.calculo.reserva_stock := true;
-      p_juego.calculo.urgente := true;
-    end if;
+      if p_juego.calculo.piezas_sin_stock between 1 and p_param.max_faltante_reserva and
+         p_juego.valor >= p_param.min_valor_reserva and
+         p_juego.es_juego = surte_util.gc_false and
+         not p_juego.calculo.podria_partirse
+      then
+        p_juego.calculo.urgente := true;
+      end if;
 
-    if p_juego.calculo.piezas_sin_stock between 1 and p_param.max_faltante_reserva and
-       p_juego.valor >= p_param.min_valor_reserva and
-       p_juego.es_juego = surte_util.gc_false and
-       not p_juego.calculo.podria_partirse
-    then
-      p_juego.calculo.urgente := true;
-    end if;
+    end analiza;
 
-  end analiza;
 
 end surte_scanner;

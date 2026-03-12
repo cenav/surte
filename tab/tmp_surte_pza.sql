@@ -42,3 +42,7 @@ alter table pevisa.tmp_surte_pza
         enable validate);
 
 grant delete, insert, select, update on pevisa.tmp_surte_pza to sig_roles_invitado;
+
+
+alter table tmp_surte_pza
+  add es_embalaje number(1);

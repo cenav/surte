@@ -1,12 +1,13 @@
 create or replace package surte_struct as
 
   type calc_detail_rt is record (
-    stock_actual number,
-    rendimiento  number,
-    faltante     number,
-    cant_final   number,
-    cant_patir   number,
-    tiene_stock  boolean
+    stock_actual    number,
+    rendimiento     number,
+    faltante        number,
+    cant_final      number,
+    cant_patir      number,
+    tiene_stock     boolean,
+    podria_partirse boolean default false
   );
 
   type calc_header_rt is record (
@@ -14,6 +15,7 @@ create or replace package surte_struct as
     podria_partirse  boolean default false,
     reserva_stock    boolean default false,
     falta_importado  boolean default false,
+    falta_embalaje   boolean default false,
     armar            boolean default false,
     urgente          boolean default false,
     min_cant_partir  number default surte_util.gc_infinito,
@@ -55,6 +57,7 @@ create or replace package surte_struct as
     es_sao          tmp_surte_pza.es_sao%type,
     es_armado       tmp_surte_pza.es_armado%type,
     es_reserva      tmp_surte_pza.es_reserva%type,
+    es_embalaje     tmp_surte_pza.es_embalaje%type,
     id_color        tmp_surte_pza.id_color%type,
     calculo         calc_header_rt,
     calc_det        calc_detail_rt,
@@ -100,5 +103,34 @@ create or replace package surte_struct as
   type tmp_jgo_aat is table of tmp_surte_jgo%rowtype index by pls_integer;
   type tmp_pza_aat is table of tmp_surte_pza%rowtype index by pls_integer;
   type tmp_sao_aat is table of tmp_surte_sao%rowtype index by pls_integer;
+
+
+  type calc_sao_rt is record (
+    armar    boolean default true,
+    faltante boolean default false,
+    pza_rank boolean default false,
+    fal1     boolean default false,
+    fal2     boolean default false,
+    fal3     boolean default false
+  );
+
+
+  type vw_sao_rt is record (
+    orden_trabajar vw_sao_articulos_emision_op.orden_trabajar%type,
+    cod_jgo        vw_sao_articulos_emision_op.cod_jgo%type,
+    nro_pedido     vw_sao_articulos_emision_op.nro_pedido%type,
+    itm_pedido     vw_sao_articulos_emision_op.itm_pedido%type,
+    cod_pza        vw_sao_articulos_emision_op.cod_pza%type,
+    color_pza      vw_sao_articulos_emision_op.color_pza%type,
+    cod_sao        vw_sao_articulos_emision_op.cod_sao%type,
+    color_sao      vw_sao_articulos_emision_op.color_sao%type,
+    cantidad       vw_sao_articulos_emision_op.cantidad%type,
+    peso           vw_sao_articulos_emision_op.peso%type,
+    valor_juego    vw_sao_articulos_emision_op.valor_juego%type,
+    calculo        calc_sao_rt
+    --saos           saos_aat
+  );
+
+  type vw_saos_aat is table of vw_sao_rt index by pls_integer;
 
 end surte_struct;

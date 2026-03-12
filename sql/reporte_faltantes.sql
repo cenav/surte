@@ -30,7 +30,7 @@ select j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, sum(p.ca
      , case
          when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
          else j.cod_cliente
-       end bk
+       end as bk
   from vw_surte_jgo j
        join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
        join vw_articulo a on p.cod_pza = a.cod_art
@@ -94,7 +94,7 @@ select ranking, nom_cliente, nro_pedido, itm_pedido, fch_pedido, ot_numero, cod_
 select case
          when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
          else j.cod_cliente
-       end break
+       end as break
      , j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
      , sum(p.cantidad) as cantidad, a.cant_faltante, a.stock_requerida, a.saldo_op
      , a.consumo_anual, min(j.orden_prioridad) as min_orden_prioridad
@@ -118,7 +118,7 @@ select case
 select case
          when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
          else j.cod_cliente
-       end break
+       end as break
      , j.cod_cliente, j.nom_cliente, a.id_grupo, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
      , sum(p.cantidad) as cantidad, a.cant_faltante, a.stock_requerida, a.saldo_op
      , a.consumo_anual, min(j.orden_prioridad) as min_orden_prioridad
@@ -167,7 +167,7 @@ select *
 select case
          when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
          else j.cod_cliente
-       end break
+       end as break
      , j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
      , sum(p.cantidad) as cantidad, a.cant_faltante, a.stock_requerida, a.saldo_op
      , a.consumo_anual, min(j.orden_prioridad) as min_orden_prioridad, a.stock
@@ -454,3 +454,145 @@ select *
 select *
   from pr_ot_det
  where ot_numero = 785731;
+
+insert into tmp_surte_faltante( nro_pedido, itm_pedido, cod_pza, requerida, faltante, ranking
+                              , cod_cliente, nom_cliente, valor, fch_pedido, dias_atraso
+                              , dsc_grupo, cod_for, cod_lin, faltante_total, faltante_sin_stock
+                              , cantidad_op, por_emitir, consumo_anual, stock, prioridad
+                              , material, ribete, subpieza, ordenes, usado_en_sao)
+  with faltantes as (
+    select j.nro_pedido, j.itm_pedido, j.cod_cliente, j.nom_cliente, j.cod_jgo, a.dsc_grupo
+         , p.cod_pza, a.cod_lin, a.numero_op, p.faltante, a.cant_faltante
+         , a.stock_requerida, a.saldo_op, a.consumo_anual, a.stock, j.valor, j.fch_pedido
+         , j.orden_prioridad, j.ranking, p.cantidad
+         , trunc(sysdate - j.fch_pedido) as dias_atraso
+         , greatest(a.cant_faltante - nvl(a.saldo_op, 0), 0) as emitir
+      from vw_surte_jgo j
+           join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+           join vw_articulo a on p.cod_pza = a.cod_art
+--          where j.id_color in ('R', 'F')
+--            and p.id_color = 'F'
+--            and p.es_sao = 'NO'
+     where ((es_prioritario = p_prioritario and p_prioritario = 'SI')
+       or ((j.cod_cliente = p_cliente or p_cliente is null) and
+           (j.es_urgente like p_urgente) and
+           (j.nro_pedido = p_pedido or p_pedido is null) and
+           (sysdate - j.fch_pedido > p_dias or p_dias is null) and
+           ((j.cant_faltante <= p_faltante or p_faltante is null) and
+            (j.valor >= p_valor or p_valor is null))))
+     union all
+    select j.nro_pedido, j.itm_pedido, j.cod_cliente, j.nom_cliente, p.cod_pza, a.dsc_grupo
+         , s.cod_sao, a.cod_lin, a.numero_op, p.faltante, a.cant_faltante
+         , a.stock_requerida, a.saldo_op, a.consumo_anual, a.stock, j.valor, j.fch_pedido
+         , j.orden_prioridad, j.ranking, p.cantidad
+         , trunc(sysdate - j.fch_pedido) as dias_atraso
+         , greatest(a.cant_faltante - nvl(a.saldo_op, 0), 0) as emitir
+      from vw_surte_jgo j
+           join vw_surte_pza p
+                on j.nro_pedido = p.nro_pedido
+                  and j.itm_pedido = p.itm_pedido
+           join vw_surte_sao s
+                on p.nro_pedido = s.nro_pedido
+                  and p.itm_pedido = s.itm_pedido
+                  and p.cod_pza = s.cod_pza
+           join vw_articulo a on s.cod_pza = a.cod_art
+--          where p.id_color = 'F'
+--            and s.id_color = 'F'
+--            and p.es_sao = 'SI'
+     where ((es_prioritario = p_prioritario and p_prioritario = 'SI')
+       or ((j.cod_cliente = p_cliente or p_cliente is null) and
+           (j.es_urgente like p_urgente) and
+           (j.nro_pedido = p_pedido or p_pedido is null) and
+           (sysdate - j.fch_pedido > p_dias or p_dias is null) and
+           ((j.cant_faltante <= p_faltante or p_faltante is null) and
+            (j.valor >= p_valor or p_valor is null))))
+     order by dsc_grupo, ranking, cod_cliente, cod_pza
+    )
+     , sao as (
+    select p.cod_cliente, p.nom_cliente, s.cod_sao
+      from vw_surte_pza p
+           join vw_surte_sao s
+                on p.nro_pedido = s.nro_pedido
+                  and p.itm_pedido = s.itm_pedido
+                  and p.cod_pza = s.cod_pza
+     group by p.cod_cliente, p.nom_cliente, s.cod_sao
+    )
+select f.nro_pedido, f.itm_pedido, f.cod_pza, f.cantidad, f.faltante, f.ranking, f.cod_cliente
+     , f.nom_cliente, f.valor, f.fch_pedido, f.dias_atraso, f.dsc_grupo, f.cod_jgo, f.cod_lin
+     , f.cant_faltante, f.stock_requerida, f.saldo_op
+     , case
+         when f.emitir >= 300 then
+           multiplo.superior(f.emitir, 50)
+         else
+           multiplo.superior(f.emitir, 10)
+       end as por_emitir
+     , f.consumo_anual, f.stock, p.dsc_prioridad
+     , surte_util.material(f.cod_pza)
+     , surte_util.ribete(f.cod_pza)
+     , surte_util.subpieza(f.cod_pza)
+     , f.numero_op
+     , case when s.cod_sao is not null then 'SI' end as usado_en_sao
+  from faltantes f
+       left join prioridad_pedidos p on f.orden_prioridad = p.orden
+       left join sao s on f.cod_cliente = s.cod_cliente and f.cod_pza = s.cod_sao;
+
+
+begin
+  surte.por_item();
+end;
+
+-- faltante puro
+select j.nro_pedido, j.itm_pedido, j.cod_cliente, j.nom_cliente, j.cod_jgo, a.dsc_grupo
+     , p.cod_pza, a.cod_lin, a.numero_op, p.faltante, a.cant_faltante
+     , a.stock_requerida, a.saldo_op, a.consumo_anual, a.stock, j.valor, j.fch_pedido
+     , j.orden_prioridad, j.ranking, p.cantidad
+     , trunc(sysdate - j.fch_pedido) as dias_atraso
+     , greatest(a.cant_faltante - nvl(a.saldo_op, 0), 0) as emitir
+  from vw_surte_jgo j
+       join vw_surte_pza p on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+       join vw_articulo a on p.cod_pza = a.cod_art
+--          where j.id_color in ('R', 'F')
+--            and p.id_color = 'F'
+--            and p.es_sao = 'NO'
+ where ((es_prioritario = :p_prioritario and :p_prioritario = 'SI')
+   or ((j.cod_cliente = :p_cliente or :p_cliente is null) and
+       (j.es_urgente like :p_urgente) and
+       (j.nro_pedido = :p_pedido or :p_pedido is null) and
+       (sysdate - j.fch_pedido > :p_dias or :p_dias is null) and
+       ((j.cant_faltante <= :p_faltante or :p_faltante is null) and
+        (j.valor >= :p_valor or :p_valor is null))));
+
+
+-- faltante por el número de piezas
+select j.nom_cliente, j.ot_tipo, j.ot_numero, j.cod_jgo
+     , count(*) as total_piezas
+     , sum(case when p.nom_color = :color_fastante then 1 else 0 end) as piezas_faltantes
+     , sum(case when p.nom_color = 'BLUE' then 1 else 0 end) as piezas_con_stock
+  from vw_surte_jgo j
+       join vw_surte_pza p
+            on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
+having sum(case when p.nom_color = :color_fastante then 1 else 0 end) = :p_faltantes
+   and sum(case when p.nom_color not in (:color_fastante, 'BLUE') then 1 else 0 end) = 0
+ group by j.ot_tipo, j.ot_numero, j.cod_jgo, j.nom_cliente;
+
+
+select * from pevisa.vw_surte_pza;
+
+begin
+  surte.por_item();
+end;
+
+select * from color;
+
+declare
+  l_rep surte_reporte_faltante.t_detalles;
+  l_idx pls_integer;
+begin
+  l_rep := surte_reporte_faltante.por_piezas('RED', 1);
+  l_idx := l_rep.first;
+
+  while l_idx is not null loop
+    dbms_output.put_line(l_rep(l_idx).cod_jgo);
+    l_idx := l_rep.next(l_idx);
+  end loop;
+end;

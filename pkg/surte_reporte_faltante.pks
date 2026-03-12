@@ -1,4 +1,4 @@
-create or replace package pevisa.surte_reporte_faltante as
+create or replace package surte_reporte_faltante as
 
   type resumen_t is record (
     dsc_grupo          surte_util.t_string,
@@ -51,6 +51,20 @@ create or replace package pevisa.surte_reporte_faltante as
     ranking            number
   );
 
+
+  type t_detalle is record (
+    nom_cliente      vw_surte_jgo.nom_cliente%type,
+    ot_tipo          vw_surte_jgo.ot_tipo%type,
+    ot_numero        vw_surte_jgo.ot_numero%type,
+    cod_pza          vw_surte_pza.cod_pza%type,
+    total_piezas     number,
+    piezas_faltantes number,
+    piezas_con_stock number
+  );
+
+
+  -- Associative Array con BINARY_INTEGER
+  type t_detalles is table of t_detalle index by binary_integer;
   type resumen_aat is table of resumen_t index by binary_integer;
   type cliente_aat is table of cliente_t index by binary_integer;
   type detalle_aat is table of detalle_t index by binary_integer;
@@ -115,5 +129,9 @@ create or replace package pevisa.surte_reporte_faltante as
 
   procedure guarda_detalle;
 
+  function por_piezas (
+    p_color_faltante varchar2
+  , p_faltantes      number
+  ) return t_detalles;
+
 end surte_reporte_faltante;
-/

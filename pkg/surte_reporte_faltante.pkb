@@ -1,4 +1,4 @@
-create or replace package body pevisa.surte_reporte_faltante as
+create or replace package body surte_reporte_faltante as
 
   procedure guarda_detalle(
     p_cliente     varchar2
@@ -108,7 +108,7 @@ create or replace package body pevisa.surte_reporte_faltante as
       , p_pais => null
       , p_vendedor => null
       , p_pedido => null
-      );
+    );
   end;
 
 /*
@@ -130,7 +130,7 @@ create or replace package body pevisa.surte_reporte_faltante as
           select case
                    when lag(j.cod_cliente) over (order by null) = j.cod_cliente then null
                    else j.cod_cliente
-                 end break
+                 end as break
                , j.cod_cliente, j.nom_cliente, a.dsc_grupo, p.cod_pza, a.cod_lin, a.numero_op
                , sum(p.cantidad) as cantidad, a.cant_faltante, a.stock_requerida, a.saldo_op
                , a.consumo_anual, min(j.orden_prioridad) as min_orden_prioridad, a.stock
@@ -461,5 +461,40 @@ create or replace package body pevisa.surte_reporte_faltante as
     end loop;
     return l_atraso;
   end;
+
+
+  function por_piezas (
+    p_color_faltante varchar2
+  , p_faltantes      number
+  ) return t_detalles is
+    l_detalle t_detalles;
+    l_idx     binary_integer := 1;
+  begin
+    for r in (
+      select j.nom_cliente, j.ot_tipo, j.ot_numero, p.cod_pza, count(*) as total_piezas
+           , sum(case when p.nom_color = p_color_faltante then 1 else 0 end) as piezas_faltantes
+           , sum(case when p.nom_color = 'BLUE' then 1 else 0 end) as piezas_con_stock
+        from vw_surte_jgo j
+             join vw_surte_pza p
+                  on j.nro_pedido = p.nro_pedido
+                    and j.itm_pedido = p.itm_pedido
+       group by j.ot_tipo, j.ot_numero, p.cod_pza, j.nom_cliente
+      having sum(case when p.nom_color = p_color_faltante then 1 else 0 end) = p_faltantes
+         and sum(case when p.nom_color not in (p_color_faltante, 'BLUE') then 1 else 0 end) = 0
+      )
+    loop
+      l_detalle(l_idx).nom_cliente := r.nom_cliente;
+      l_detalle(l_idx).ot_tipo := r.ot_tipo;
+      l_detalle(l_idx).ot_numero := r.ot_numero;
+      l_detalle(l_idx).cod_pza := r.cod_pza;
+      l_detalle(l_idx).total_piezas := r.total_piezas;
+      l_detalle(l_idx).piezas_faltantes := r.piezas_faltantes;
+      l_detalle(l_idx).piezas_con_stock := r.piezas_con_stock;
+      l_idx := l_idx + 1;
+    end loop;
+
+    return l_detalle;
+
+  end por_piezas;
+
 end surte_reporte_faltante;
-/

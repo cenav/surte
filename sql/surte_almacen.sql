@@ -1781,3 +1781,214 @@ select id_pedido
                      on gc.cod_grupo = gcc.cod_grupo
           where gc.es_simulacion = 1
          );
+
+select f.cod_art, f.cod_for, f.tipo, f.canti, f.neto, f.linea, a.tp_art
+     , case
+         when lag(f.cod_art) over (order by null) = f.cod_art then null
+         else f.cod_art
+       end as quiebre
+  from pcformulas f
+       join articul m on f.cod_art = m.cod_art
+       join articul a on f.cod_for = a.cod_art
+ where m.tp_art = 'A'
+   and a.tp_art = 'P'
+   and f.cod_art = 'SA 74090US-1';
+
+select *
+  from articul
+ where cod_art = '200.2595ALR';
+
+select prioridad
+  --codigo_venta,
+     , cant_prog, valor, art_cod_art, cantidad, stock, faltante, pendiente, transito
+     , falt_des_transito, back_order, apurar, pedir, estado, cant_menor_30, cant_30_60
+     , cant_mayor_60, detalle_embarque
+  from vw_prioridad_piezas_imp_z
+ where prioridad = 6255;
+
+select *
+  from embarques_d
+ where cod_art = '04111-37091 WO/H';
+
+select round(eg.fecha_llegada - sysdate)
+     , d.cantidad_packing
+  from lg_pedjam g
+       join lg_itemjam i
+            on (i.num_importa = g.num_importa)
+              and g.estado < 8
+              and nvl(g.estado, '0') not in ('9', '8', '6')
+              and nvl(i.estado, '0') not in ('9', '8', '6')
+              and i.saldo > 0
+       left join embarques_d d
+                 on (i.num_importa = d.num_importa
+                   and i.cod_art = d.cod_art)
+                   and d.cantidad_packing > 0
+       left join embarques_g eg on (d.numero_embarque = eg.numero_embarque)
+ where i.cod_art = '180.1179FIB';
+
+select eta - sysdate
+  from view_saldoped_embarque_ingreso
+ where cod_art = '180.1179FIB';
+
+
+select cod_art
+     , sum(saldo) as total_saldo
+     , sum(cantidad_packing) as total_packing
+  -- MAX(CODIGO_VENTA) AS codigo_venta,
+     , listagg(
+    nvl(to_char(numero_embarque), 'x') || ' => ' || nvl(num_importa, 'x')
+  , ' | '
+       )
+    within group (order by numero_embarque, num_importa)
+  as detalle_embarque
+     , sum(
+    case
+      when round(eta - sysdate) < 30 then cantidad_packing
+      else 0
+    end
+       )
+  as cant_menor_30
+     , sum(
+    case
+      when round(eta - sysdate) between 30 and 59 then cantidad_packing
+      else 0
+    end
+       )
+  as cant_30_60
+     , sum(
+    case
+      when round(eta - sysdate) >= 60 then cantidad_packing
+      else 0
+    end
+       )
+  as cant_mayor_60
+  from view_saldoped_embarque_ingreso
+ where fecha_ingreso is null
+   and cod_art = '180.1179FIB'
+ group by cod_art;
+
+select *
+  from articul
+ where cod_art = '400.539';
+
+
+select * from tipo_linea;
+
+
+select * from tab_lineas_tipo_linea;
+
+
+select *
+  from tab_lineas_tipo_linea
+ where cod_tipo = 3
+ order by cod_linea;
+
+
+select *
+  from tab_lineas_tipo_linea
+ where cod_tipo = 2
+ order by cod_linea; --> embalajes
+
+declare
+  l_true boolean;
+begin
+  l_true := surte_util.gc_true;
+end;
+
+select *
+  from tipo_linea
+ order by cod_tipo;
+
+select *
+  from tab_lineas_tipo_linea
+ where cod_tipo = 3 --> cajas
+ order by cod_linea;
+
+select *
+  from color_surtimiento
+ order by peso;
+
+-- pedido con un solo embalaje que faltante
+select *
+  from expedido_d
+ where numero = 16354
+   and nro = 553;
+
+select *
+  from almacenes
+ where cod_alm = '05';
+
+select *
+  from almacen_local
+ where cod_alm = '05';
+
+select *
+  from exclientes
+ where cod_cliente = '996057';
+
+select *
+  from pevisa.pr_ot_impresion
+ where nuot_tipoot_codigo = 'AR'
+   and numero = 1050673;
+
+select *
+  from pevisa.pr_ot
+ where nuot_tipoot_codigo = 'AR'
+   and numero = 1050673;
+
+select *
+  from pevisa.almacen
+ where cod_art = '200.1861NA'
+   and cod_alm = '03';
+
+-- 200.1861NA stock 109 --> cambiado 1000000
+
+-- 16329 67
+-- 16341 84
+
+select *
+  from vw_ordenes_impresas_piezas
+ where art_cod_art = '290.4688NA';
+
+select *
+  from almacen
+ where cod_alm in ('03', '05')
+   and cod_art = '290.4688NA';
+
+-- 93006GR --> 302 stock
+select *
+  from almacen
+ where cod_art = '93006GR';
+
+select greatest(200, 0) from dual;
+
+select greatest(200 - 0, 0) from dual;
+
+select *
+  from almacen
+ where cod_art = '290.4688NA'
+   and cod_alm in (
+    select regexp_substr(:p_ids, '[^,]+', 1, level)
+      from dual
+   connect by regexp_substr(:p_ids, '[^,]+', 1, level) is not null
+    );
+
+
+select * from vw_analisis_embalaje;
+
+
+select *
+  from vw_personal
+ where nombre like '%ARCADIO%';
+
+
+select valor
+  from impuesto
+ where codigo = 1;
+
+
+select *
+  from planilla10.plcontrol
+ where usuario = 'MMIRANDA';
+
+select * from color;

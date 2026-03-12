@@ -72,5 +72,11 @@
     )
 select *
   from detalle d
- where d.pedido = 16291
+ where d.pedido in (16122, 16354, 16286, 16291)
  order by ranking, oa;
+
+  select * from grupo_cliente;
+
+  select *
+    from grupo_cliente_cliente
+   where cod_grupo = 'G001';

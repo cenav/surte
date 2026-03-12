@@ -1,4 +1,4 @@
-create or replace package pevisa.surte_reporte as
+create or replace package surte_reporte as
 
   type resumen_t is record (
     dsc_grupo          surte_util.t_string,
@@ -101,15 +101,10 @@ create or replace package pevisa.surte_reporte as
   , p_dias       number
   ) return dias_aat;
 
+  procedure carga_embalaje;
 
-  function importados(
-    p_cliente    varchar2
-  , p_simulacion varchar2
-  , p_urgente    varchar2
-  , p_faltante   number
-  , p_valor      number
-  , p_dias       number
-  ) return dias_aat;
+  function embalaje(
+    p_cod_art vw_analisis_embalaje.cod_art%type
+  ) return vw_analisis_embalaje%rowtype;
 
 end surte_reporte;
-/

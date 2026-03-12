@@ -1,5 +1,7 @@
 create or replace package body surte_loader as
 
+  g_embalaje surte_embalaje.aat;
+
   cursor pedidos_cur(
     p_pais varchar2
     , p_vendedor varchar2
@@ -14,15 +16,18 @@ create or replace package body surte_loader as
         select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
              , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
              , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni
-             , v.valor, v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item
-             , v.tiene_importado, v.impreso, v.fch_impresion, v.es_juego, v.es_importado
-             , v.es_prioritario, v.es_sao, v.cant_prog, v.es_reservado, v.es_simulacion, v.es_nuevo
+             , v.valor
+             , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado
+             , v.impreso
+             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
+             , v.es_reservado, v.es_simulacion, v.es_nuevo
              , case
                  when lag(v.numero) over (order by null) = v.numero then null
                  else v.numero
                end as oa
              , dense_rank() over (
           order by
+            case when v.cod_cliente = '998001' then 1 else 0 end asc,
             case when p.prioritario = 1 then v.es_prioritario end desc --> Autozone siempre primero
             , case when p.prioritario = 1 then v.orden_prioritario end--> Dentro del Autozone ordena
             , v.es_reservado desc
@@ -85,6 +90,13 @@ create or replace package body surte_loader as
       from detalle d
      order by ranking, oa;
 
+
+  procedure init is
+  begin
+    g_embalaje := surte_embalaje.lineas();
+  end;
+
+
   procedure crea_maestro(
     p_pedido in     pedidos_cur%rowtype
   , p_juegos in out surte_struct.juegos_aat
@@ -136,6 +148,7 @@ create or replace package body surte_loader as
     p_juegos(p_pedido.ranking).piezas(l_idx).cant_final := null;
     p_juegos(p_pedido.ranking).piezas(l_idx).tiene_stock_itm := null;
     p_juegos(p_pedido.ranking).piezas(l_idx).es_sao := p_pedido.es_sao;
+    p_juegos(p_pedido.ranking).piezas(l_idx).es_embalaje := case when g_embalaje.exists(p_pedido.cod_lin) then 1 else 0 end;
     p_juegos(p_pedido.ranking).piezas(l_idx).id_color := null;
   end;
 
@@ -150,6 +163,7 @@ create or replace package body surte_loader as
   ) return surte_struct.juegos_aat is
     l_juegos surte_struct.juegos_aat;
   begin
+    init();
     for r_pedido in pedidos_cur(p_pais, p_vendedor, p_dias, p_empaque, p_es_juego, p_orden,
                     p_es_nuevo)
     loop

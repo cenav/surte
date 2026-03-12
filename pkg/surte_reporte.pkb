@@ -1,4 +1,10 @@
-create or replace package body pevisa.surte_reporte as
+create or replace package body surte_reporte as
+
+  type embalaje_aat is table of vw_analisis_embalaje%rowtype
+    index by vw_analisis_embalaje.cod_art%type;
+
+  g_embalaje embalaje_aat;
+
   /*
    Private routines
    */
@@ -371,5 +377,23 @@ create or replace package body pevisa.surte_reporte as
     end loop;
     return l_atraso;
   end;
+
+  procedure carga_embalaje is
+  begin
+    g_embalaje.delete;
+    for r in (select * from vw_analisis_embalaje) loop
+      g_embalaje(r.cod_art) := r;
+    end loop;
+  end;
+
+  function embalaje(
+    p_cod_art vw_analisis_embalaje.cod_art%type
+  ) return vw_analisis_embalaje%rowtype is
+  begin
+    return g_embalaje(p_cod_art);
+  exception
+    when no_data_found then
+      return null;
+  end;
+
 end surte_reporte;
-/
