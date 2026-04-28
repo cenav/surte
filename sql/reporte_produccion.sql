@@ -90,4 +90,3 @@ select *
   from pr_embarques
  where ano_embarque = 2024
    and mes_embarque = 8;
-

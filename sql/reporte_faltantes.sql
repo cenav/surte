@@ -571,8 +571,8 @@ select j.nom_cliente, j.ot_tipo, j.ot_numero, j.cod_jgo
   from vw_surte_jgo j
        join vw_surte_pza p
             on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
-having sum(case when p.nom_color = :color_fastante then 1 else 0 end) = :p_faltantes
-   and sum(case when p.nom_color not in (:color_fastante, 'BLUE') then 1 else 0 end) = 0
+having sum(case when p.nom_color = :p_color_faltante then 1 else 0 end) = :p_faltantes
+   and sum(case when p.nom_color not in (:p_color_faltante, 'BLUE') then 1 else 0 end) = 0
  group by j.ot_tipo, j.ot_numero, j.cod_jgo, j.nom_cliente;
 
 
@@ -596,3 +596,15 @@ begin
     l_idx := l_rep.next(l_idx);
   end loop;
 end;
+
+-- ERROR
+-- select j.nom_cliente, j.ot_tipo, j.ot_numero, p.cod_pza, count(*) as total_piezas
+--      , sum(case when p.nom_color = p_color_faltante then 1 else 0 end) as piezas_faltantes
+--      , sum(case when p.nom_color = 'BLUE' then 1 else 0 end) as piezas_con_stock
+--   from vw_surte_jgo j
+--        join vw_surte_pza p
+--             on j.nro_pedido = p.nro_pedido
+--               and j.itm_pedido = p.itm_pedido
+--  group by j.ot_tipo, j.ot_numero, p.cod_pza, j.nom_cliente
+-- having sum(case when p.nom_color = p_color_faltante then 1 else 0 end) = p_faltantes
+--    and sum(case when p.nom_color not in (p_color_faltante, 'BLUE') then 1 else 0 end) = 0

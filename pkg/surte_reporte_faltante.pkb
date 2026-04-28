@@ -471,22 +471,21 @@ create or replace package body surte_reporte_faltante as
     l_idx     binary_integer := 1;
   begin
     for r in (
-      select j.nom_cliente, j.ot_tipo, j.ot_numero, p.cod_pza, count(*) as total_piezas
+      select j.nom_cliente, j.ot_tipo, j.ot_numero, j.cod_jgo, count(*) as total_piezas
            , sum(case when p.nom_color = p_color_faltante then 1 else 0 end) as piezas_faltantes
            , sum(case when p.nom_color = 'BLUE' then 1 else 0 end) as piezas_con_stock
         from vw_surte_jgo j
              join vw_surte_pza p
-                  on j.nro_pedido = p.nro_pedido
-                    and j.itm_pedido = p.itm_pedido
-       group by j.ot_tipo, j.ot_numero, p.cod_pza, j.nom_cliente
+                  on j.nro_pedido = p.nro_pedido and j.itm_pedido = p.itm_pedido
       having sum(case when p.nom_color = p_color_faltante then 1 else 0 end) = p_faltantes
          and sum(case when p.nom_color not in (p_color_faltante, 'BLUE') then 1 else 0 end) = 0
+       group by j.ot_tipo, j.ot_numero, j.cod_jgo, j.nom_cliente
       )
     loop
       l_detalle(l_idx).nom_cliente := r.nom_cliente;
       l_detalle(l_idx).ot_tipo := r.ot_tipo;
       l_detalle(l_idx).ot_numero := r.ot_numero;
-      l_detalle(l_idx).cod_pza := r.cod_pza;
+      l_detalle(l_idx).cod_pza := r.cod_jgo;
       l_detalle(l_idx).total_piezas := r.total_piezas;
       l_detalle(l_idx).piezas_faltantes := r.piezas_faltantes;
       l_detalle(l_idx).piezas_con_stock := r.piezas_con_stock;

@@ -10,7 +10,7 @@ begin
     , p_dias => null
     , p_empaque => null
     , p_es_juego => null
-    , p_orden => 2 --> por artículos agrupados
+    , p_orden => 2 --> [1] items mayor valor [2] por artículos agrupados
     , p_es_nuevo => null
   );
 end;
@@ -75,3 +75,36 @@ select *
 select *
   from vw_surte_pza
  where cod_pza = 'DUR 300.570';
+
+select nom_cliente, count(*)
+  from vw_surte_jgo
+ where imprimir = 1
+ group by nom_cliente
+ order by 2 desc;
+
+select *
+  from vw_surte_jgo
+ where nom_cliente = 'STOCK';
+
+select *
+  from vw_surte_jgo
+ where imprimir = 1;
+
+
+select * from vw_surte_jgo;
+
+begin
+  surte_impresion.selecciona(1, 1);
+end;
+
+-- piezas faltantes
+select dsc_grupo, cod_pza, cod_lin, ordenes, faltante_total, faltante_sin_stock, cantidad_op
+     , consumo_anual, material, ribete, subpieza, prioridad, stock, usado_en_sao
+     , sum(requerida) as requerida
+     , sum(faltante) as faltante
+     , sum(por_emitir) as por_emitir
+     , sum(valor) as valor
+     , min(ranking) as ranking
+  from tmp_surte_faltante
+ group by dsc_grupo, cod_pza, cod_lin, ordenes, faltante_total, faltante_sin_stock, cantidad_op
+        , consumo_anual, material, ribete, subpieza, prioridad, stock, usado_en_sao;

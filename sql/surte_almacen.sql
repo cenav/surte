@@ -1991,4 +1991,14 @@ select *
   from planilla10.plcontrol
  where usuario = 'MMIRANDA';
 
+
 select * from color;
+
+
+select art_cod_art, nvl(sum(cant_formula), 0) as stock_oa_impresa
+  from vw_ordenes_impresas_piezas
+ group by art_cod_art
+
+--, surte_util.material(p.cod_pza) as material
+--, surte_util.ribete(p.cod_pza) as  ribete
+--, surte_util.subpieza(p.cod_pza) as subpieza
