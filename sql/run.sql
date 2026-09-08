@@ -15,6 +15,7 @@ begin
   );
 end;
 
+
 begin
   surte_reporte_faltante.guarda_detalle();
 end;
@@ -76,15 +77,18 @@ select *
   from vw_surte_pza
  where cod_pza = 'DUR 300.570';
 
+
 select nom_cliente, count(*)
   from vw_surte_jgo
  where imprimir = 1
  group by nom_cliente
  order by 2 desc;
 
+
 select *
   from vw_surte_jgo
  where nom_cliente = 'STOCK';
+
 
 select *
   from vw_surte_jgo
@@ -93,9 +97,11 @@ select *
 
 select * from vw_surte_jgo;
 
+
 begin
   surte_impresion.selecciona(1, 1);
 end;
+
 
 -- piezas faltantes
 select dsc_grupo, cod_pza, cod_lin, ordenes, faltante_total, faltante_sin_stock, cantidad_op
@@ -108,3 +114,20 @@ select dsc_grupo, cod_pza, cod_lin, ordenes, faltante_total, faltante_sin_stock,
   from tmp_surte_faltante
  group by dsc_grupo, cod_pza, cod_lin, ordenes, faltante_total, faltante_sin_stock, cantidad_op
         , consumo_anual, material, ribete, subpieza, prioridad, stock, usado_en_sao;
+
+
+select *
+  from tab_lineas
+ where linea = '919';
+
+
+declare
+  l_total_imprimir          number := 0;
+  l_total_imprimir_no_surte number := 0;
+begin
+  surte_impresion.selecciona(p_juegos => 1, p_sueltos => 1);
+  l_total_imprimir := surte.total_imprimir();
+  dbms_output.put_line(l_total_imprimir);
+  l_total_imprimir_no_surte := surte.total_imprimir_no_surte();
+  dbms_output.put_line(l_total_imprimir_no_surte);
+end;

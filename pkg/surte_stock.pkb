@@ -11,8 +11,8 @@ create or replace package body surte_stock as
           with impresas as (
             select o.art_cod_art, sum(o.cant_formula) as impreso
               from vw_ordenes_impresas_piezas o
-                   join param_surte p on p.id_param = 1
-             where o.dias_impreso <= p.dias_impreso_bien
+--                    join param_surte p on p.id_param = 1
+--              where o.dias_impreso <= p.dias_impreso_bien
              group by o.art_cod_art
             )
              , stock as (
@@ -34,14 +34,23 @@ create or replace package body surte_stock as
     ) is
     begin
       for r in (
-          with saos as (
-            select f.cod_for
-              from vw_formula_saos f
-             group by f.cod_for
-            )
-        select a.cod_for, nvl(s.stock, 0) as stock
+        ---DESCUENTA STOCK ACTUAL DE SAOS MENOS LOS IMPRESOS.. ORDENES SAO
+          with impreso
+            as (
+              select o.art_cod_art, sum(o.cant_formula) as impreso
+                from ordenes_piezas_impresas_saos o
+               group by o.art_cod_art
+              )
+             , saos
+            as (
+              select f.cod_for
+                from vw_formula_saos f
+               group by f.cod_for
+              )
+        select a.cod_for, nvl(greatest(s.stock - nvl(i.impreso, 0), 0), 0) as stock
           from saos a
                left join vw_stock_almacen s on a.cod_for = s.cod_art
+               left join impreso i on s.cod_art = i.art_cod_art
         )
       loop
         p_stocks(r.cod_for).stock_inicial := r.stock;
@@ -59,7 +68,11 @@ create or replace package body surte_stock as
   , p_stocks aat
   ) return number is
   begin
-    return case when p_stocks.exists(p_codart) then p_stocks(p_codart).stock_actual else 0 end;
+    return case
+             when p_stocks.exists(p_codart
+               ) then p_stocks(p_codart).stock_actual
+             else 0
+           end;
   end;
 
   function inicial(
@@ -67,7 +80,11 @@ create or replace package body surte_stock as
   , p_stocks aat
   ) return number is
   begin
-    return case when p_stocks.exists(p_codart) then p_stocks(p_codart).stock_inicial else 0 end;
+    return case
+             when p_stocks.exists(p_codart
+               ) then p_stocks(p_codart).stock_inicial
+             else 0
+           end;
   end;
 
   procedure reduce(

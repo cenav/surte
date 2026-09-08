@@ -7,7 +7,8 @@ create or replace package body surte_impresion as
   ) is
   begin
     insert into orden_impresa_surtimiento(ot_tpo, ot_ser, ot_nro, usuario, fch_ins)
-    values (p_tpo_ot, p_ser_ot, p_nro_ot, user, sysdate);
+    values
+      (p_tpo_ot, p_ser_ot, p_nro_ot, user, sysdate);
   exception
     when dup_val_on_index then
       update orden_impresa_surtimiento
@@ -25,7 +26,8 @@ create or replace package body surte_impresion as
   ) is
   begin
     insert into tmp_imprime_ot(usuario, tpo_ot, ser_ot, nro_ot)
-    values (p_usuario, p_tpo_ot, p_ser_ot, p_nro_ot);
+    values
+      (p_usuario, p_tpo_ot, p_ser_ot, p_nro_ot);
   end;
 
   procedure temporal(
@@ -66,6 +68,19 @@ create or replace package body surte_impresion as
                         else
                           0
                       end;
+
+    update tmp_surte_jgo t
+       set t.imprimir = 0
+     where exists (
+       select 1
+         from pedido_prioridad_trabajo p
+        where p.id_pedido = t.nro_pedido
+          and p.id_prioridad_trabajo = 3
+       );
+  end;
+
+  procedure selecciona_sao is
+  begin
+    null;
   end;
 end surte_impresion;
-/

@@ -1,4 +1,4 @@
-create or replace view vw_ordenes_pedido_pendiente as
+create or replace force view "PEVISA"."VW_ORDENES_PEDIDO_PENDIENTE" as
   with stock_actual as (
     select cod_art, stock
       from vw_stock_almacen
@@ -28,25 +28,35 @@ create or replace view vw_ordenes_pedido_pendiente as
      union
     select id_pedido
       from view_pedidos_pendientes_38
-     where cod_cliente in
-           (
-             select gcc.cod_cliente
-               from grupo_cliente gc
-                    join grupo_cliente_cliente gcc
-                         on gc.cod_grupo = gcc.cod_grupo
-              where gc.es_simulacion = 1
-             )
+     where cod_cliente in (
+       select gcc.cod_cliente
+         from grupo_cliente gc
+              join grupo_cliente_cliente gcc
+                   on gc.cod_grupo = gcc.cod_grupo
+        where gc.es_simulacion = 1
+       )
+     union
+-- Pedido excepcional
+    select numero as id_pedido
+      from expedidos
+     where numero = 17366
+     union
+-- se trabaja pero no se surte
+    select id_pedido
+      from pedido_prioridad_trabajo
     )
      , cliente_nuevo as (
     select case
              when v.nombre_corp is not null then v.nombre_corp
              else e.cod_cliente
-           end as cod_corporativo
+           end
+      as cod_corporativo
          , case
              when v.nombre_corp is not null then v.nombre_corp
              when c.abreviada is not null then c.abreviada
              else c.nombre
-           end as nombre
+           end
+      as nombre
          , count(*) as compras
       from expedidos e
            left join exclientes_varios v
@@ -72,12 +82,17 @@ create or replace view vw_ordenes_pedido_pendiente as
          , d.cant_formula, d.saldo, d.rendimiento, d.cant_formula - nvl(d.saldo, 0) as despachar
          , d.cod_lin, h.formu_art_cod_art, h.abre02, h.cant_prog
          , case g.grupo when 1 then 1 else 0 end as es_juego
-         , case when i.numero is not null then 'SI' else 'NO' end as impreso
-         , i.fch_impresion
-         , case
-             when d.cod_lin between '900' and '999' and length(d.cod_lin) = 3 then 1
-             else 0
-           end as es_importado
+         , case when i.numero is not null then 'SI' else 'NO' end
+      as impreso
+         , i.fch_impresion, case
+                              when d.cod_lin between '900' and '999'
+                                and length(d.cod_lin) = 3
+                                then
+                                1
+                              else
+                                0
+                            end
+      as es_importado
          , case a.tp_art when 'A' then 1 else 0 end as es_sao
       from pr_ot h
            join pr_ot_det d
@@ -96,31 +111,35 @@ create or replace view vw_ordenes_pedido_pendiente as
        and h.estado < 5
        and d.cod_lin not between '800' and '899'
     )
-     , pedidos as (
-    -- exportacion
+     , descuentos as (
+    select to_number(cod_cliente) as id_cliente, sum(porcentaje) as porc_desc
+      from exclientes_notacredito
+     group by to_number(cod_cliente)
+    )
+     , pedidos as ( -- exportacion
     select p.numero as pedido, d.nro as pedido_item, p.cod_cliente
          , coalesce(c.abreviada, p.nombre) as nombre, p.fecha as fch_pedido, o.numero, o.nuot_serie
          , o.nuot_tipoot_codigo, o.fecha, o.jaba, o.estado, o.rendimiento, o.destino, o.art_cod_art
          , o.cant_formula, o.saldo, o.despachar, o.cod_lin, o.formu_art_cod_art, o.abre02
          , o.es_juego, o.impreso, o.fch_impresion, o.es_importado, d.preuni, a.codigo_aux as pais
          , p.zona as vendedor, p.empaque, o.es_sao, o.cant_prog
-         , round(d.canti * d.preuni, 2) as valor
+         , round(d.canti * d.preuni * (1 - nvl(s.porc_desc, 0) / 100), 2) as valor
          , case
              when v.nombre_corp is not null then v.nombre_corp
              else p.cod_cliente
-           end as cod_corporativo
-         , case when m.id_pedido is not null then 1 else 0 end as se_trabaja
+           end
+      as cod_corporativo
       from expedidos p
            join expedido_d d on p.numero = d.numero
            join ordenes o
                 on o.pedido = p.numero
                   and o.pedido_item = d.nro
                   and o.destino = '1'
-           left join prioridad_marcada m on p.numero = m.id_pedido
+           join prioridad_marcada m on p.numero = m.id_pedido
            left join expaises a on p.pais = a.pais
            left join exclientes c on p.cod_cliente = c.cod_cliente
-           left join exclientes_varios v
-                     on p.cod_cliente = v.cod_cliente
+           left join exclientes_varios v on p.cod_cliente = v.cod_cliente
+           left join descuentos s on p.cod_cliente = s.id_cliente
      union all
 -- nacional
     select p.numero as pedido, d.nro as pedido_item, p.cod_cliente, p.nombre, p.fecha as fch_pedido
@@ -129,14 +148,13 @@ create or replace view vw_ordenes_pedido_pendiente as
          , o.formu_art_cod_art, o.abre02, o.es_juego, o.impreso, o.fch_impresion, o.es_importado
          , d.preuni, p.pais, 'PE' as vendedor, p.empaque, o.es_sao, o.cant_prog
          , round(d.canti * d.preuni, 2) as valor, p.cod_cliente as cod_corporativo
-         , case when m.id_pedido is not null then 1 else 0 end as se_trabaja
       from expednac p
            join expednac_d d on p.numero = d.numero
            join ordenes o
                 on o.pedido = p.numero
                   and o.pedido_item = d.nro
                   and o.destino = '2'
-           left join prioridad_marcada m on p.numero = m.id_pedido
+           join prioridad_marcada m on p.numero = m.id_pedido
     )
      , detalle as (
     select nvl(gcc.cod_grupo, p.cod_cliente) as cod_cliente, nvl(gc.dsc_grupo, p.nombre) as nombre
@@ -144,8 +162,14 @@ create or replace view vw_ordenes_pedido_pendiente as
          , p.fecha, p.jaba, p.estado, p.art_cod_art, p.cant_formula, p.saldo, p.pais, p.vendedor
          , p.empaque, p.cant_formula - nvl(p.saldo, 0) as despachar, p.cod_lin, p.rendimiento
          , p.formu_art_cod_art, p.abre02, nvl(s.stock, 0) as stock, p.preuni, p.valor, p.es_sao
-         , p.cant_prog, p.se_trabaja
-         , case when p.cant_formula - nvl(p.saldo, 0) >= s.stock then 0 else 1 end as tiene_stock
+         , p.cant_prog, case
+                          when p.cant_formula - nvl(p.saldo, 0) >= s.stock
+                            then
+                            0
+                          else
+                            1
+                        end
+      as tiene_stock
          , p.impreso, p.fch_impresion, p.es_juego, p.es_importado
          , nvl(gc.es_prioritario, 0) as es_prioritario, nvl(gc.orden, 0) as orden_prioritario
          , nvl(gc.es_simulacion, 0) as es_simulacion
@@ -162,20 +186,34 @@ create or replace view vw_ordenes_pedido_pendiente as
 select d.cod_cliente, d.nombre, d.fch_pedido, d.pedido, d.pedido_item, d.numero, d.nuot_serie
      , d.nuot_tipoot_codigo, d.fecha, d.jaba, d.estado, d.art_cod_art, d.cant_formula, d.rendimiento
      , d.saldo, d.despachar, d.cod_lin, d.formu_art_cod_art, d.abre02, d.preuni, d.pais, d.vendedor
-     , d.empaque, d.valor, d.stock, d.tiene_stock, d.es_sao, d.cant_prog
-     , case max(d.es_importado) over (partition by d.numero, d.nuot_serie, d.nuot_tipoot_codigo)
-         when 0 then 0
-         else 1
-       end as tiene_importado
-     , case min(d.tiene_stock) over (partition by d.numero, d.nuot_serie, d.nuot_tipoot_codigo)
-         when 0 then 'NO'
-         else 'SI'
-       end as tiene_stock_ot
+     , d.empaque, d.valor, d.stock, d.tiene_stock, d.es_sao, d.cant_prog, case max(
+    d.es_importado)
+    over (
+      partition by d.numero, d.nuot_serie, d.nuot_tipoot_codigo)
+                                                                            when 0
+                                                                              then
+                                                                              0
+                                                                            else
+                                                                              1
+                                                                          end
+  as tiene_importado
+     , case min(
+    d.tiene_stock)
+    over (
+      partition by d.numero, d.nuot_serie, d.nuot_tipoot_codigo)
+         when 0
+           then
+           'NO'
+         else
+           'SI'
+       end
+  as tiene_stock_ot
      , d.tiene_stock as tiene_stock_item, d.impreso, d.fch_impresion, d.es_juego, d.es_importado
      , d.es_prioritario, d.orden_prioritario, d.es_simulacion
-     , case when r.pedido_nro is not null then 1 else 0 end as es_reservado
-     , d.es_nuevo, d.se_trabaja
-     , sum(distinct d.valor) over (partition by d.cod_cliente, d.formu_art_cod_art)
+     , case when r.pedido_nro is not null then 1 else 0 end
+  as es_reservado
+     , d.es_nuevo, sum(distinct d.valor)
+                       over (partition by d.cod_cliente, d.formu_art_cod_art)
   as total_art
   from detalle d
        left join reserva_surtimiento r
@@ -186,8 +224,15 @@ select cod_cliente, nombre, fch_pedido, pedido, pedido_item, numero, nuot_serie,
      , formu_art_cod_art, abre02, preuni, pais, vendedor, empaque, valor, stock, tiene_stock, es_sao
      , cant_prog, tiene_importado, tiene_stock_ot, tiene_stock_item, impreso, fch_impresion
      , es_juego, es_importado, es_prioritario, orden_prioritario, es_simulacion, es_reservado
-     , es_nuevo, 1 as se_trabaja, total_art
+     , es_nuevo, total_art
   from view_ordenes_pedido_saos
- order by nuot_serie, nuot_tipoot_codigo, numero
-/
-
+ union all
+select cod_cliente, nombre, fch_pedido, pedido, pedido_item, numero, nuot_serie, nuot_tipoot_codigo
+     , fecha, jaba, estado, art_cod_art, cant_formula, rendimiento, saldo, despachar, cod_lin
+     , formu_art_cod_art, abre02, preuni, pais, vendedor, empaque, valor, stock, tiene_stock, es_sao
+     , cant_prog, tiene_importado, tiene_stock_ot, tiene_stock_item, impreso, fch_impresion
+     , es_juego, es_importado, es_prioritario, orden_prioritario, es_simulacion, es_reservado
+     , es_nuevo -- 1 AS se_trabaja,
+     , total_art
+  from view_ordenes_pedido_stock
+ order by nuot_serie, nuot_tipoot_codigo, numero;

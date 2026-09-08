@@ -347,7 +347,7 @@ create or replace package body surte as
           p_juego.piezas(j).tiene_stock_itm := surte_util.gc_true;
           p_juego.piezas(j).id_color := surte_color.gc_completo;
         elsif l_stock_actual < p_juego.piezas(j).cantidad
-              and p_juego.piezas(j).es_importado = surte_util.gc_true then
+          and p_juego.piezas(j).es_importado = surte_util.gc_true then
           p_juego.piezas(j).tiene_stock_itm := surte_util.gc_false;
           p_juego.piezas(j).id_color := surte_color.gc_importado;
         elsif p_juego.piezas(j).es_embalaje = surte_util.gc_true then
@@ -384,7 +384,9 @@ create or replace package body surte as
           p_juego.calculo.armar := true;
         end if;
       end loop;
+
     end;
+
 
     procedure consume_stock(
       p_juegos in out nocopy surte_struct.juegos_aat
@@ -635,6 +637,8 @@ create or replace package body surte as
     surte_emite.sao(p_opcion);
   end;
 
+  -- Modificado para que solo sume lo que se puede imprimir
+  -- y no la prioridad si se trabaja pero no surte
   function total_imprimir return number is
     l_total number := 0;
   begin
@@ -643,7 +647,8 @@ create or replace package body surte as
       from vw_surte_jgo
      where id_color in (surte_color.gc_completo, surte_color.gc_partir)
        --quitando el valor de cliente stock.
-       and cod_cliente not in ('998001');
+       and cod_cliente not in ('998001')
+       and imprimir = 1; --> solo los que estan marcados para impresion
 
     return l_total;
   end;
@@ -685,10 +690,26 @@ create or replace package body surte as
     return l_total;
   end;
 
+  -- Total que se podria imprimir si se trabajara y se surtiera
+  -- pero tiene prioridad si trabaja pero no surte
+  function total_imprimir_no_surte return number is
+    l_total number := 0;
+  begin
+    select nvl(sum(valor_surtir), 0)
+      into l_total
+      from vw_surte_jgo
+     where id_color in (surte_color.gc_completo, surte_color.gc_partir)
+       --quitando el valor de cliente stock.
+       and cod_cliente not in ('998001')
+       and imprimir = 0; --> no se puede imprimir por prioridad se trabaja pero no se surte
+
+    return l_total;
+  end;
+
+
   function total_surtir return number is
   begin
-    return total_imprimir() + total_impreso();
+    return total_imprimir() + total_impreso() + total_imprimir_no_surte();
   end;
-end surte;
-/
 
+end surte;

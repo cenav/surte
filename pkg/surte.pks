@@ -6,7 +6,7 @@ create or replace package surte as
   , p_empaque  varchar2 default null
   , p_es_juego pls_integer default null
   , p_orden    pls_integer default 1
-  , p_es_nuevo    pls_integer default null
+  , p_es_nuevo pls_integer default null
   );
 
   procedure emite_sao(
@@ -25,4 +25,5 @@ create or replace package surte as
 
   function total_surtir return number;
 
+  function total_imprimir_no_surte return number;
 end surte;

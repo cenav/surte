@@ -1328,8 +1328,8 @@ select *
               )
        )
        and v.impreso = 'NO'
---            and pedido = 14660
---            and pedido_item = 135
+       and pedido = 17332
+       and pedido_item = 1
     )
 select *
   from detalle d
@@ -1997,8 +1997,41 @@ select * from color;
 
 select art_cod_art, nvl(sum(cant_formula), 0) as stock_oa_impresa
   from vw_ordenes_impresas_piezas
- group by art_cod_art
+ group by art_cod_art;
 
 --, surte_util.material(p.cod_pza) as material
 --, surte_util.ribete(p.cod_pza) as  ribete
 --, surte_util.subpieza(p.cod_pza) as subpieza
+
+
+select * from clientes_prioritarios;
+
+
+select *
+  from exclientes
+ where cod_cliente in (
+                       '990641', '991503', '992073'
+   );
+
+
+select * from planprod_utilidad_cliente;
+
+
+select * from grupo_cliente;
+
+
+select *
+  from exclientes
+ where abreviada = 'MHPTBR';
+
+
+select *
+  from almacenes
+ where cod_alm in ('03', '05', '16', '06');
+
+select *
+  from almacenes
+ where cod_alm in ('03', '05', '16');
+
+
+select * from vw_surte_jgo;

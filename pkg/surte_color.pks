@@ -1,4 +1,4 @@
-create or replace package surte_color as
+create or replace package        surte_color as
   gc_completo constant surte_util.t_string := 'C';
   gc_partir constant surte_util.t_string := 'P';
   gc_faltante constant surte_util.t_string := 'F';
@@ -6,6 +6,7 @@ create or replace package surte_color as
   gc_desarrollo constant surte_util.t_string := 'D';
   gc_armar constant surte_util.t_string := 'A';
   gc_reserva constant surte_util.t_string := 'R';
+  gc_embalaje constant surte_util.t_string := 'E';
 
   type aat is table of color_surtimiento%rowtype index by varchar2(1);
 

@@ -16,21 +16,19 @@ create or replace package body surte_loader as
         select v.cod_cliente, v.nombre, v.fch_pedido, v.pedido, v.pedido_item, v.nuot_serie
              , v.nuot_tipoot_codigo, v.numero, v.fecha, v.formu_art_cod_art, v.estado, v.art_cod_art
              , v.cant_formula, v.rendimiento, v.saldo, v.despachar, v.cod_lin, v.abre02, v.preuni
-             , v.valor
-             , v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item, v.tiene_importado
-             , v.impreso
-             , v.fch_impresion, v.es_juego, v.es_importado, v.es_prioritario, v.es_sao, v.cant_prog
-             , v.es_reservado, v.es_simulacion, v.es_nuevo
+             , v.valor, v.stock, v.tiene_stock, v.tiene_stock_ot, v.tiene_stock_item
+             , v.tiene_importado, v.impreso, v.fch_impresion, v.es_juego, v.es_importado
+             , v.es_prioritario, v.es_sao, v.cant_prog, v.es_reservado, v.es_simulacion, v.es_nuevo
              , case
                  when lag(v.numero) over (order by null) = v.numero then null
                  else v.numero
                end as oa
              , dense_rank() over (
           order by
-            case when v.cod_cliente = '998001' then 1 else 0 end asc,
-            case when p.prioritario = 1 then v.es_prioritario end desc --> Autozone siempre primero
+            case when v.cod_cliente = '998001' then 1 else 0 end asc --> Pedido stock primero
+            , case when p.prioritario = 1 then v.es_prioritario end desc --> Autozone siempre primero
             , case when p.prioritario = 1 then v.orden_prioritario end--> Dentro del Autozone ordena
-            , v.es_reservado desc
+            , case when p_orden != 3 then v.es_reservado end desc
 --         , case when trunc(sysdate) - v.fch_pedido > :p_dias then 1 else 0 end desc
             , case p_orden
                 when 1 then
@@ -54,6 +52,14 @@ create or replace package body surte_loader as
                 when 2 then
                   v.fch_pedido
               end
+            , case p_orden
+                when 3 then
+                  v.fch_pedido
+              end
+            , case p_orden
+                when 3 then
+                  v.valor
+              end desc
             , v.pedido
             , v.pedido_item
           ) as ranking
@@ -148,7 +154,11 @@ create or replace package body surte_loader as
     p_juegos(p_pedido.ranking).piezas(l_idx).cant_final := null;
     p_juegos(p_pedido.ranking).piezas(l_idx).tiene_stock_itm := null;
     p_juegos(p_pedido.ranking).piezas(l_idx).es_sao := p_pedido.es_sao;
-    p_juegos(p_pedido.ranking).piezas(l_idx).es_embalaje := case when g_embalaje.exists(p_pedido.cod_lin) then 1 else 0 end;
+    p_juegos(p_pedido.ranking).piezas(l_idx).es_embalaje := case
+                                                              when g_embalaje.exists(p_pedido.cod_lin
+                                                                ) then 1
+                                                              else 0
+                                                            end;
     p_juegos(p_pedido.ranking).piezas(l_idx).id_color := null;
   end;
 
